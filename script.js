@@ -13,7 +13,7 @@ let infos = [];
 
 let aspects = [
     3/4,
-    4/3,
+    // 4/3,
 ]
 
 let SCALE;
@@ -28,11 +28,12 @@ function main() {
     infos = [];
     
     SCALE = 4;
-    ASPECT = aspects[Math.floor(Math.random()*aspects.length)];
+    ASPECT = aspects[Math.floor(prng.rand()*aspects.length)];
     EDGE_OFFSET = 50;
     if(ASPECT >= 1)
         EDGE_OFFSET = window.innerHeight*.15;
-    THICKNESS = 80 * SCALE;
+    THICKNESS = rand(30, 180) * SCALE;
+    THICKNESS = 60 * SCALE;
 
     if(!canvas)
         canvas = document.getElementById("canvas");
@@ -40,8 +41,6 @@ function main() {
     if(!gl)
         gl = canvas.getContext('webgl', {preserveDrawingBuffer: true, antialias: true});
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-
-    // set width and height, full screen
 
     setupCurves();
     constructQuads();
@@ -67,7 +66,7 @@ function render(){
     // let colorUniformLocation = gl.getUniformLocation(program, "u_color");
 
     gl.uniform2f(resolutionUniformLocation, gl.canvas.width, gl.canvas.height);
-    gl.uniform3f(seedUniformLocation, Math.random(), Math.random(), Math.random());
+    gl.uniform3f(seedUniformLocation, prng.rand(), prng.rand(), prng.rand());
 
     let positionBuffer = gl.createBuffer();
     let uvBuffer = gl.createBuffer();
@@ -148,7 +147,7 @@ function render(){
     // Pass the texture to the shader
     gl.uniform1i(uTextureUniformLocation, 0);
     gl.uniform2f(gl.getUniformLocation(bgProgram, "u_resolution"), gl.canvas.width, gl.canvas.height);
-    gl.uniform3f(gl.getUniformLocation(bgProgram, "u_seed"), Math.random(), Math.random(), Math.random());
+    gl.uniform3f(gl.getUniformLocation(bgProgram, "u_seed"), prng.rand(), prng.rand(), prng.rand());
 
     let bgPositionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, bgPositionBuffer);
@@ -268,16 +267,47 @@ function constructQuads(){
 }
 
 function rand(a, b){
-    return a + Math.random()*(b-a);
+    return a + prng.rand()*(b-a);
 }
 
 function map(value, min1, max1, min2, max2){
     return min2 + (value - min1) * (max2 - min2) / (max1 - min1);
 }
 
+function resample(curve){
+    let newCurve = [];
+    for(let i = 0; i < curve.length-1; i++){
+        let p1 = curve[i];
+        let p2 = curve[i+1];
+        let d = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+        let num = Math.round(d/THICKNESS)+1;
+        for(let j = 0; j < num; j++){
+            let t = j/num;
+            let x = p1.x + t*(p2.x - p1.x);
+            let y = p1.y + t*(p2.y - p1.y);
+            newCurve.push(new Vector(x, y));
+        }
+    }
+    newCurve.push(curve[curve.length-1]);
+    return newCurve;
+}
+
+function intersects(point, curve){
+    if(curve.length < 2)
+        return false;
+    let resampled = resample(curve);
+
+    for(let i = 0; i < resampled.length; i++){
+        let d = point.distance(resampled[i]);
+        if(d < THICKNESS*2)
+            return true;
+    }
+    return false;
+}
+
 function setupCurves(){
 
-    let pos = new Vector(canvas.width/2 + rand(-200, 200), canvas.height/2 + rand(-200, 200));
+    let pos = new Vector(canvas.width/2 + rand(-2, 2), canvas.height/2 + rand(-2, 2));
     let direction0 = new Vector(rand(-1, 1), rand(-1, 1));
     direction0.normalize();
 
@@ -286,16 +316,18 @@ function setupCurves(){
     let center = new Vector(canvas.width/2, canvas.height/2);
 
     let margin = canvas.width*.1;
-    let iters = Math.round(rand(3, 10));
+    let iters = Math.round(rand(3, 14));
     let sumpoints = new Vector(0, 0);
-    for(let i = 0; i < iters; i++){
+    curve.push(pos);
+    sumpoints.add(pos);
+    for(let i = 1; i < iters; i++){
         let direction = direction0.clone();
         direction.rotate(map(power(rand(0, 1), 3), 0, 1, Math.PI/2, Math.PI*3/2));
         direction.normalize();
         direction.multiplyScalar(SCALE*rand(400, 1400)*.5);
         let newPos = new Vector(pos.x + direction.x, pos.y + direction.y);
         let tries = 0;
-        while(tries++ < 30 && (newPos.x < margin || newPos.x > canvas.width-margin || newPos.y < margin || newPos.y > canvas.height-margin)){
+        while(tries++ < 130 && (newPos.x < margin || newPos.x > canvas.width-margin || newPos.y < margin || newPos.y > canvas.height-margin || intersects(newPos, curve))){
             direction = direction0.clone();
             direction.rotate(map(power(rand(0, 1), 3), 0, 1, Math.PI/2, Math.PI*3/2));
             direction.normalize();
