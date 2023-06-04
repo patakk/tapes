@@ -223,7 +223,7 @@ function constructQuads(){
         leftAnchors.push(new Vector(points[points.length-1].x + bv.x * THICKNESS, points[points.length-1].y + bv.y * THICKNESS));
         rightAnchors.push(new Vector(points[points.length-1].x - bv.x * THICKNESS, points[points.length-1].y - bv.y * THICKNESS));
     
-        for(let j = 0; j < points.length-1; j++){
+        for(let j = 0; j < leftAnchors.length-1; j++){
             quads.push(
                 [
                     [leftAnchors[j].x, leftAnchors[j].y],

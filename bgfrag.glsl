@@ -53,7 +53,7 @@ void main() {
     vec3 result = color + (blurred1 - color)*.5;
     result = result + (colorshifted - result)*.0;
 
-    result = blurred1 + .06*(-.5 + salt);
+    result = blurred1 + .016*(-.5 + salt);
     result = clamp(result, 0., 1.);
 
     gl_FragColor = vec4(result.rgb, 1.);

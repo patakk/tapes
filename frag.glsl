@@ -25,13 +25,13 @@ void main() {
 
     vec3 c1 = vec3(r, g, b);
 
-    float var2 = v_uv.x + rnd*.2;
+    float var2 = v_uv.x + rnd*.02;
     float r2 = .52 + .48*sin(var2*(.1 + 3.*mod(u_seed.x+vix, 1.)) + mod(u_seed.z+vix, 1.)*10. + vix*12.31);
     float g2 = .52 + .48*sin(var2*(.1 + 3.*mod(u_seed.y+vix, 1.)) + mod(u_seed.x+vix, 1.)*10. + vix*12.31);
     float b2 = .52 + .48*sin(var2*(.1 + 3.*mod(u_seed.z+vix, 1.)) + mod(u_seed.y+vix, 1.)*10. + vix*12.31);
     vec3 c2 = vec3(r2, g2, b2);
 
-    vec3 res = c1 + 0.75*(c2 - c1);
+    vec3 res = c1 + 0.0*(c2 - c1);
 
 
     gl_FragColor = vec4(res, 1.0);  // RGBA, purple color
