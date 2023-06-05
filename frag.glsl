@@ -6,14 +6,31 @@ uniform float u_version;
 uniform vec2 u_resolution;
 varying vec3 v_info;
 
+uniform sampler2D u_randomTexture;
+uniform vec2 u_randomTextureSize;
+
 #define NUM_OCTAVES 8
+
+vec4 hcrandom(vec3 co) {
+    // Map the coordinates to the range [0, 1] so we can use them to sample the texture.
+    vec2 uv = fract(co.xy+co.z*1.13141);
+
+    // Sample the texture and return a random value in the range [0, 1].
+    return texture2D(u_randomTexture, uv).rgba;
+}
+
+
+// float hash12(vec2 p)
+// {
+// 	vec3 p3  = fract(vec3(p.xyx) * .1031);
+//     p3 += dot(p3, p3.yzx + 33.33);
+//     return fract((p3.x + p3.y) * p3.z);
+// }
 
 
 float hash12(vec2 p)
 {
-	vec3 p3  = fract(vec3(p.xyx) * .1031);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.x + p3.y) * p3.z);
+	return hcrandom(vec3(p, 0.)*1013.31).r;
 }
 
 float noise (vec2 _st) {
@@ -66,15 +83,19 @@ float fbm (vec2 _st) {
 }
 
 
+// vec3 random3(vec3 c) {
+// 	float j = 4096.0*sin(dot(c,vec3(17.0, 59.4, 15.0)));
+// 	vec3 r;
+// 	r.z = fract(512.0*j);
+// 	j *= .125;
+// 	r.x = fract(512.0*j);
+// 	j *= .125;
+// 	r.y = fract(512.0*j);
+// 	return r-0.5;
+// }
+
 vec3 random3(vec3 c) {
-	float j = 4096.0*sin(dot(c,vec3(17.0, 59.4, 15.0)));
-	vec3 r;
-	r.z = fract(512.0*j);
-	j *= .125;
-	r.x = fract(512.0*j);
-	j *= .125;
-	r.y = fract(512.0*j);
-	return r-0.5;
+	return hcrandom(c).rgb;
 }
 /* skew constants for 3d simplex functions */
 const float F3 =  0.3333333;
@@ -236,7 +257,7 @@ void main() {
     gl_FragColor = vec4(0.0,0.0,0.0, 1.0);  // RGBA, purple color
     gl_FragColor = vec4(res, 1.0);  // RGBA, purple color
     if(u_seed.z < 0.001 && abs(u_version-1.0) < 0.001){
-        float hhhs = hash12(vec2(v_uv.x*555.4, v_uv.y*555.4));
+        float hhhs = hash12(vec2(v_uv.x*2.4, v_uv.y*2.4));
         gl_FragColor = vec4(hhhs*.9+.1, hhhs*.9+.1, hhhs*.9+.1, 1.0);  // RGBA, purple color
     }
     if(u_seed.z < 0.001 && abs(u_version-2.0) < 0.001){
@@ -275,8 +296,9 @@ void main() {
      //gl_FragColor = vec4(vec3(nz2), 1.0);  // RGBA, purple color
 
     // gl_FragColor = vec4(v_uv.x, v_uv.y, 0., 1.0);  // RGBA, purple color
+    // float randValue = clamp(hcrandom(v_uv.xyx).r, 0., 1.);
+    // gl_FragColor = vec4(vec3(randValue), 1.0);  // RGBA, purple color
 }
-
 
 void main2() {
 
@@ -295,4 +317,5 @@ void main2() {
         float hhhs = hash12(vec2(v_uv.x*444.4, v_uv.y*444.4));
         gl_FragColor = vec4(hhhs*.9+.1, hhhs*.9+.1, hhhs*.9+.1, 1.0);  // RGBA, purple color
     }
+
 }

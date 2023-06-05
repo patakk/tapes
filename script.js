@@ -24,7 +24,8 @@ let EDGE_OFFSET;
 let THICKNESS;
 let VERSION;
 
-let DIM = window.innerHeight*3;
+let DIM = 2000;
+let REN = window.innerHeight*2;
 
 function main(options) {
     
@@ -45,7 +46,7 @@ function main(options) {
     if(ASPECT >= 1)
         EDGE_OFFSET = window.innerHeight*.15;
     THICKNESS = 70 * SCALE;
-    THICKNESS = rand(10, 100) * SCALE;
+    THICKNESS = rand(10, 70) * SCALE;
 
     if(!canvas)
         canvas = document.getElementById("canvas");
@@ -53,17 +54,44 @@ function main(options) {
     if(!gl)
         gl = canvas.getContext('webgl', {preserveDrawingBuffer: true, antialias: true});
 
-    gl.canvas.width = DIM;
-    gl.canvas.height = Math.round(DIM/ASPECT);
+    gl.canvas.width = REN;
+    gl.canvas.height = Math.round(REN/ASPECT);
 
-    console.log(canvas.width, canvas.height)
+    gl.viewport(0, 0, REN, Math.round(REN/ASPECT));
 
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-
-    setupCurves();
+    setupCurves(options);
     constructQuads();
 
     render();
+}
+
+function getRandomTexture(){
+    var width = 1024;
+    var height = 1024;
+
+    // Create a new Uint8Array to hold the pixel data for the texture.
+    // Each pixel needs 4 bytes (for RGBA), so multiply the width and height by 4.
+    var data = new Uint8Array(width * height * 4);
+
+    // Fill the array with random values.
+    for (var i = 0; i < data.length; i++) {
+        // Multiply by 256 to get a value in the range [0, 256), then use Math.floor to round down to an integer.
+        data[i] = Math.floor(prng.rand() * 256);
+    }
+
+    // Create the texture.
+    var texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+
+    // Set the parameters so we can render any size image.
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+    // Upload the image into the texture.
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+    return texture;
 }
 
 function render(){
@@ -75,17 +103,27 @@ function render(){
 
     let program = createProgram(gl, vertexShader, fragmentShader);
 
+
+
     gl.useProgram(program);
     let positionAttributeLocation = gl.getAttribLocation(program, "a_position");
     let uvAttributeLocation = gl.getAttribLocation(program, "a_uv");
     let infoAttributeLocation = gl.getAttribLocation(program, "a_info");
     let transformAttributeLocation = gl.getAttribLocation(program, "a_transform");
+    let simulationUniformLocation = gl.getUniformLocation(program, "u_simulation");
     let resolutionUniformLocation = gl.getUniformLocation(program, "u_resolution");
     let seedUniformLocation = gl.getUniformLocation(program, "u_seed");
     let versionUniformLocation = gl.getUniformLocation(program, "u_version");
+    var randomTextureLocation = gl.getUniformLocation(program, "u_randomTexture");
+    var randomTextureSizeLocation = gl.getUniformLocation(program, "u_randomTextureSize");
+
     // let colorUniformLocation = gl.getUniformLocation(program, "u_color");
 
-    gl.uniform2f(resolutionUniformLocation, gl.canvas.width, gl.canvas.height);
+    gl.uniform2f(resolutionUniformLocation, REN, Math.round(REN/ASPECT));
+    gl.uniform2f(simulationUniformLocation, DIM, Math.round(DIM/ASPECT));
+    
+    let randomtexture = getRandomTexture();
+
     let seed1 = prng.rand();
     let seed2 = prng.rand();
     let seed3 = prng.rand();
@@ -116,6 +154,7 @@ function render(){
     gl.enableVertexAttribArray(infoAttributeLocation);
     gl.vertexAttribPointer(infoAttributeLocation, 3, type, normalize, stride, offset);
 
+
     // gl.bindBuffer(gl.ARRAY_BUFFER, transformBuffer);
     // gl.bufferData(gl.ARRAY_BUFFER, transforms, gl.STATIC_DRAW);
     // gl.enableVertexAttribArray(transformAttributeLocation);
@@ -130,10 +169,15 @@ function render(){
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.canvas.width, gl.canvas.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.canvas.width, gl.canvas.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, REN, Math.round(REN/ASPECT), 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    // gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, REN, Math.round(REN/ASPECT), 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
 
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+
+    gl.activeTexture(gl.TEXTURE0 + 0);
+    gl.bindTexture(gl.TEXTURE_2D, randomtexture);
+    gl.uniform1i(randomTextureLocation, 0);
+    gl.uniform2f(randomTextureSizeLocation, 256, 256);
 
     gl.clearColor(0.898, 0.827, 0.675, 1);
     gl.clearColor(rand(.9, .93), rand(.9, .92), rand(.89, .91), 1);
@@ -168,19 +212,19 @@ function render(){
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);  // unbind the framebuffer
 
     // Now bind the texture and draw a screen-sized quad using your post-processing shader:
-    gl.bindTexture(gl.TEXTURE_2D, texture);
+    // gl.bindTexture(gl.TEXTURE_2D, randomtexture);
     // Setup and draw your screen-sized quad
     let bgPositionAttributeLocation = gl.getAttribLocation(bgProgram, "a_position");
     let uTextureUniformLocation = gl.getUniformLocation(bgProgram, "u_texture");
 
     // Pass the texture to the shader
     
-    gl.activeTexture(gl.TEXTURE0);
+    gl.activeTexture(gl.TEXTURE0+0);
     // Now bind the texture and draw a screen-sized quad using your post-processing shader:
     gl.bindTexture(gl.TEXTURE_2D, texture);
     // Pass the texture to the shader
     gl.uniform1i(uTextureUniformLocation, 0);
-    gl.uniform2f(gl.getUniformLocation(bgProgram, "u_resolution"), gl.canvas.width, gl.canvas.height);
+    gl.uniform2f(gl.getUniformLocation(bgProgram, "u_resolution"), REN, Math.round(REN/ASPECT));
     gl.uniform3f(gl.getUniformLocation(bgProgram, "u_seed"), prng.rand(), prng.rand(), prng.rand());
 
     let bgPositionBuffer = gl.createBuffer();
@@ -411,7 +455,7 @@ function addquadpointstoattributes(p1, p2, p3, p4, uv1=[0,0], uv2=[0,1], uv3=[1,
         ]
     );
 
-    let maxscale = 3/Math.max(gl.canvas.width, gl.canvas.height);
+    let maxscale = 3/Math.max(DIM, DIM/ASPECT);
     uv1 = p1.clone().sub(offset_0).rotate(-angle_0).multiplyScalar(maxscale);
     uv2 = p2.clone().sub(offset_0).rotate(-angle_0).multiplyScalar(maxscale);
     uv3 = p3.clone().sub(offset_0).rotate(-angle_0).multiplyScalar(maxscale);
@@ -483,7 +527,7 @@ function intersects(point, curve){
     return false;
 }
 
-function setupCurves(){
+function setupCurves(options){
 
     let success = false;
     let ctries = 0;
@@ -542,13 +586,6 @@ function setupCurves(){
         let scx = width/maxwidth;
         let scy = height/maxheight;
         let sc = Math.max(scx, scy);
-        for(let i = 0; i < curve.length; i++){
-            let p = curve[i];
-            if(sc > 1){
-                p.x /= sc;
-                p.y /= sc;
-            }
-        }
 
         // let sumpoints = new Vector(0, 0);
         // for(let i = 0; i < curve.length; i++){
@@ -558,6 +595,13 @@ function setupCurves(){
 
         for(let i = 0; i < curve.length; i++){
             curve[i].sub(middle);
+        }
+        if(sc > 1){
+            for(let i = 0; i < curve.length; i++){
+                curve[i].multiplyScalar(1/sc);
+            }
+        }
+        for(let i = 0; i < curve.length; i++){
             curve[i].add(center);
         }
 
@@ -570,7 +614,7 @@ function setupCurves(){
             }
         }
     }
-
+    console.log(ctries)
     curves.push(curve);
 }
 
@@ -653,7 +697,7 @@ document.addEventListener('keydown', function(event) {
     if(event.key == 's') {
         save();
     }
-    else if ('a123456'.indexOf(event.key) !== -1) {
+    else if ('qa123456'.indexOf(event.key) !== -1) {
         if(event.key == '1') {
             vversion = 0;
         }
