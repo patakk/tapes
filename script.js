@@ -32,8 +32,9 @@ function main() {
     EDGE_OFFSET = 50;
     if(ASPECT >= 1)
         EDGE_OFFSET = window.innerHeight*.15;
-    THICKNESS = rand(30, 180) * SCALE;
-    THICKNESS = 60 * SCALE;
+    EDGE_OFFSET = 0;
+    THICKNESS = 70 * SCALE;
+    THICKNESS = rand(10, 100) * SCALE;
 
     if(!canvas)
         canvas = document.getElementById("canvas");
@@ -66,7 +67,10 @@ function render(){
     // let colorUniformLocation = gl.getUniformLocation(program, "u_color");
 
     gl.uniform2f(resolutionUniformLocation, gl.canvas.width, gl.canvas.height);
-    gl.uniform3f(seedUniformLocation, prng.rand(), prng.rand(), prng.rand());
+    let seed1 = prng.rand();
+    let seed2 = prng.rand();
+    let seed3 = prng.rand();
+    gl.uniform3f(seedUniformLocation, seed1, seed2, seed3);
 
     let positionBuffer = gl.createBuffer();
     let uvBuffer = gl.createBuffer();
@@ -105,11 +109,15 @@ function render(){
 
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
 
-    gl.clearColor(rand(.9, .93), rand(.9, .93), rand(.9, .93), 1);
+    gl.clearColor(0.898, 0.827, 0.675, 1);
+    gl.clearColor(rand(.9, .93), rand(.9, .92), rand(.89, .91), 1);
+    gl.clearColor(rand(.92, .93), rand(.92, .92), rand(.9, .91), 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
     let numQuads = quads.length / 8;
+    let numInfos = infos.length / 12;
     for(let i = 0; i < numQuads; i++) {
         const offset = i * 4; // 4 vertices per quad
+        gl.uniform3f(seedUniformLocation, seed1, seed2, seed3*(infos[offset*3]%2==1));
         gl.drawArrays(gl.TRIANGLE_STRIP, offset, 4);
     }
 
@@ -224,34 +232,132 @@ function constructQuads(){
         rightAnchors.push(new Vector(points[points.length-1].x - bv.x * THICKNESS, points[points.length-1].y - bv.y * THICKNESS));
     
         for(let j = 0; j < leftAnchors.length-1; j++){
-            quads.push(
-                [
-                    [leftAnchors[j].x, leftAnchors[j].y],
-                    [rightAnchors[j].x, rightAnchors[j].y],
-                    [leftAnchors[j+1].x, leftAnchors[j+1].y],
-                    [rightAnchors[j+1].x, rightAnchors[j+1].y],
-                ]
-            );
+            let p1 = leftAnchors[j];
+            let p2 = rightAnchors[j];
+            let p3 = leftAnchors[j+1];
+            let p4 = rightAnchors[j+1];
+            
+            let p13 = new Vector(p3.x - p1.x, p3.y - p1.y);
+            let p34 = new Vector(p4.x - p3.x, p4.y - p3.y);
+            let p31 = new Vector(p1.x - p3.x, p1.y - p3.y);
+            let p24 = new Vector(p4.x - p2.x, p4.y - p2.y);
+            let p42 = new Vector(p2.x - p4.x, p2.y - p4.y);
+            let aa = p13.length();
+            let bb = p24.length();
+            let avgdist = (aa + bb)/2;
+            p13.normalize();
+            p31.normalize();
+            p24.normalize();
+            p42.normalize();
+            let p12 = new Vector(p2.x - p1.x, p2.y - p1.y);
+            let dot1 = p12.dot(p13);
+            let np1, np2, np3, np4, np5, np6, np7, np8;
+            if(dot1 > 0.01){
+                let om1 = dot1/aa;
+                let a1 = p13.clone();
+                a1.multiplyScalar(dot1);
+                np1 = p1.clone();
+                np4 = p2.clone();
+                np3 = p1.clone().add(a1);
+                np2 = p1.clone(); //.add(p2).multiplyScalar(.5);
+                addquadpointstoattributes(np1, np2, np3, np4, [0, 0], [0, 1], [om1, 0], [om1, 1], avgdist, j);
 
-            let d1 = Math.sqrt(Math.pow(leftAnchors[j].x - leftAnchors[j+1].x, 2) + Math.pow(leftAnchors[j].y - leftAnchors[j+1].y, 2));
-            let d2 = Math.sqrt(Math.pow(rightAnchors[j].x - rightAnchors[j+1].x, 2) + Math.pow(rightAnchors[j].y - rightAnchors[j+1].y, 2));
-            let d3 = Math.sqrt(Math.pow(leftAnchors[j].x - rightAnchors[j].x, 2) + Math.pow(leftAnchors[j].y - rightAnchors[j].y, 2));
-            uvs.push(
-                [
-                    [0, 0],
-                    [0, d3],
-                    [d1, 0],
-                    [d2, d3],
-                ]
-            );
-            infos.push(
-                [
-                    [j+i*4, j+i*4, j+i*4],
-                    [j+i*4, j+i*4, j+i*4],
-                    [j+i*4, j+i*4, j+i*4],
-                    [j+i*4, j+i*4, j+i*4],
-                ]
-            );
+                let dot2 = p34.dot(p31);
+                if(dot2 > 0.01){
+                    let om2 = 1.-dot2/aa;
+                    let a1 = p31.clone();
+                    a1.multiplyScalar(dot2);
+                    np6 = p4.clone();
+                    np7 = p3.clone();
+                    np5 = p3.clone().add(a1);
+                    np8 = p3.clone(); //.add(p4).multiplyScalar(.5);
+                    addquadpointstoattributes(np5, np6, np7, np8, [om2, 0], [om2, 1], [1, 0], [1, 1], avgdist, j);
+                }
+                else if(dot2 < -0.01){
+                    let om2 = 1.-dot2/bb;
+                    let a1 = p42.clone();
+                    a1.multiplyScalar(-dot2);
+                    np5 = p3.clone();
+                    np8 = p4.clone();
+                    np6 = p4.clone().add(a1);
+                    np7 = p4.clone(); //.add(p3).multiplyScalar(.5);
+                    addquadpointstoattributes(np5, np6, np7, np8, [om2, 0], [om2, 1], [1, 0], [1, 1], avgdist, j);
+                }
+                else{
+                    np5 = p3.clone();
+                    np6 = p4.clone();
+                }
+                addquadpointstoattributes(np3, np4, np5, np6, [om1, 0], [om1, 1], [1, 0], [1, 1], avgdist, j);
+            }
+            else if(dot1 < -0.01){
+                let om1 = -dot1/bb;
+                let a1 = p24.clone();
+                a1.multiplyScalar(-dot1);
+                np2 = p2.clone();
+                np3 = p1.clone();
+                np4 = p2.clone().add(a1);
+                np1 = p2.clone(); //.add(p1).multiplyScalar(.5);
+                addquadpointstoattributes(np1, np2, np3, np4, [0, 0], [0, 1], [om1, 0], [om1, 1], avgdist, j);
+
+                let dot2 = p34.dot(p31);
+                if(dot2 > 0.01){
+                    let om2 = 1.-dot2/aa;
+                    let a1 = p31.clone();
+                    a1.multiplyScalar(dot2);
+                    np6 = p4.clone();
+                    np7 = p3.clone();
+                    np5 = p3.clone().add(a1);
+                    np8 = p3.clone(); //.add(p4).multiplyScalar(.5);
+                    addquadpointstoattributes(np5, np6, np7, np8, [om2, 0], [om2, 1], [1, 0], [1, 1], avgdist, j);
+                }
+                else if(dot2 < -0.01){
+                    let om2 = 1.-dot2/bb;
+                    let a1 = p42.clone();
+                    a1.multiplyScalar(-dot2);
+                    np5 = p3.clone();
+                    np8 = p4.clone();
+                    np6 = p4.clone().add(a1);
+                    np7 = p4.clone(); //.add(p3).multiplyScalar(.5);
+                    addquadpointstoattributes(np5, np6, np7, np8, [om2, 0], [om2, 1], [1, 0], [1, 1], avgdist, j);
+                }
+                else{
+                    np5 = p3.clone();
+                    np6 = p4.clone();
+                }
+                addquadpointstoattributes(np3, np4, np5, np6, [om1, 0], [om1, 1], [1, 0], [1, 1], avgdist, j);
+            }
+            else{
+                np3 = p1.clone();
+                np4 = p2.clone();let dot2 = p34.dot(p31);
+                if(dot2 > 0.01){
+                    let om2 = 1.-dot2/aa;
+                    let a1 = p31.clone();
+                    a1.multiplyScalar(dot2);
+                    np6 = p4.clone();
+                    np7 = p3.clone();
+                    np5 = p3.clone().add(a1);
+                    np8 = p3.clone(); //.add(p4).multiplyScalar(.5);
+                    addquadpointstoattributes(np5, np6, np7, np8, [om2, 0], [om2, 1], [1, 0], [1, 1], avgdist, j);
+                }
+                else if(dot2 < -0.01){
+                    let om2 = 1.-dot2/bb;
+                    let a1 = p42.clone();
+                    a1.multiplyScalar(-dot2);
+                    np5 = p3.clone();
+                    np8 = p4.clone();
+                    np6 = p4.clone().add(a1);
+                    np7 = p4.clone(); //.add(p3).multiplyScalar(.5);
+                    addquadpointstoattributes(np5, np6, np7, np8, [om2, 0], [om2, 1], [1, 0], [1, 1], avgdist, j);
+                }
+                else{
+                    np5 = p3.clone();
+                    np6 = p4.clone();
+                }
+                addquadpointstoattributes(np3, np4, np5, np6, [0, 0], [0, 1], [1, 0], [1, 1], avgdist, j);
+                // addquadpointstoattributes(p1, p2, p3, p4);
+            }
+
+            // addquadpointstoattributes(p1, p2, p3, p4);
         }
     }
 
@@ -264,6 +370,43 @@ function constructQuads(){
     quads = new Float32Array(flatten(quads));
     uvs = new Float32Array(flatten(uvs));
     infos = new Float32Array(flatten(infos));
+}
+
+function addquadpointstoattributes(p1, p2, p3, p4, uv1=[0,0], uv2=[0,1], uv3=[1,0], uv4=[1,1], avgdist=1., j=0){
+    quads.push(
+        [
+            [p1.x, p1.y],
+            [p2.x, p2.y],
+            [p3.x, p3.y],
+            [p4.x, p4.y],
+        ]
+    );
+
+    uv1 = [uv1[0]*avgdist, uv1[1]*avgdist];
+    uv2 = [uv2[0]*avgdist, uv2[1]*avgdist];
+    uv3 = [uv3[0]*avgdist, uv3[1]*avgdist];
+    uv4 = [uv4[0]*avgdist, uv4[1]*avgdist];
+
+    let d1 = Math.sqrt(Math.pow(p1.x - p3.x, 2) + Math.pow(p1.y - p3.y, 2));
+    let d2 = Math.sqrt(Math.pow(p2.x - p4.x, 2) + Math.pow(p2.y - p4.y, 2));
+    let d3 = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+    uvs.push(
+        [
+            uv1,
+            uv2,
+            uv3,
+            uv4,
+        ]
+    );
+    let seed = j;
+    infos.push(
+        [
+            [seed, seed, seed],
+            [seed, seed, seed],
+            [seed, seed, seed],
+            [seed, seed, seed],
+        ]
+    );
 }
 
 function rand(a, b){
@@ -307,42 +450,55 @@ function intersects(point, curve){
 
 function setupCurves(){
 
-    let pos = new Vector(canvas.width/2 + rand(-2, 2), canvas.height/2 + rand(-2, 2));
-    let direction0 = new Vector(rand(-1, 1), rand(-1, 1));
-    direction0.normalize();
-
+    let success = false;
+    let ctries = 0;
     let curve = [];
+    let pathsteps = Math.round(rand(2, 6))*2;
+    while(!success && ctries++ < 100){
+        let pos = new Vector(canvas.width/2 + rand(-222, 222), canvas.height/2 + rand(-222, 222));
+        let direction0 = new Vector(rand(-1, 1), rand(-1, 1));
+        direction0.normalize();
 
-    let center = new Vector(canvas.width/2, canvas.height/2);
+        curve = [];
+        let center = new Vector(canvas.width/2, canvas.height/2);
 
-    let margin = canvas.width*.1;
-    let iters = Math.round(rand(3, 14));
-    let sumpoints = new Vector(0, 0);
-    curve.push(pos);
-    sumpoints.add(pos);
-    for(let i = 1; i < iters; i++){
-        let direction = direction0.clone();
-        direction.rotate(map(power(rand(0, 1), 3), 0, 1, Math.PI/2, Math.PI*3/2));
-        direction.normalize();
-        direction.multiplyScalar(SCALE*rand(400, 1400)*.5);
-        let newPos = new Vector(pos.x + direction.x, pos.y + direction.y);
-        let tries = 0;
-        while(tries++ < 130 && (newPos.x < margin || newPos.x > canvas.width-margin || newPos.y < margin || newPos.y > canvas.height-margin || intersects(newPos, curve))){
-            direction = direction0.clone();
+        let margin = canvas.width*.07;
+        let sumpoints = new Vector(0, 0);
+        curve.push(pos);
+        sumpoints.add(pos);
+        for(let i = 0; i < pathsteps; i++){
+            let direction = direction0.clone();
             direction.rotate(map(power(rand(0, 1), 3), 0, 1, Math.PI/2, Math.PI*3/2));
             direction.normalize();
             direction.multiplyScalar(SCALE*rand(400, 1400)*.5);
-            newPos = new Vector(pos.x + direction.x, pos.y + direction.y);
+            let newPos = new Vector(pos.x + direction.x, pos.y + direction.y);
+            let tries = 0;
+            while(tries++ < 130 && (newPos.x < margin || newPos.x > canvas.width-margin || newPos.y < margin || newPos.y > canvas.height-margin || intersects(newPos, curve))){
+                direction = direction0.clone();
+                direction.rotate(map(power(rand(0, 1), 3), 0, 1, Math.PI/2, Math.PI*3/2));
+                direction.normalize();
+                direction.multiplyScalar(SCALE*rand(400, 1400)*.5);
+                newPos = new Vector(pos.x + direction.x, pos.y + direction.y);
+            }
+            direction0 = direction.clone();
+            pos = newPos;
+            curve.push(newPos);
+            sumpoints.add(newPos);
         }
-        direction0 = direction.clone();
-        pos = newPos;
-        curve.push(newPos);
-        sumpoints.add(newPos);
-    }
-    sumpoints.multiplyScalar(1/iters);
-    for(let i = 0; i < curve.length; i++){
-        curve[i].sub(sumpoints);
-        curve[i].add(center);
+        sumpoints.multiplyScalar(1/(pathsteps+1));
+        for(let i = 0; i < curve.length; i++){
+            curve[i].sub(sumpoints);
+            curve[i].add(center);
+        }
+
+        success = true;
+        for(let i = 0; i < curve.length; i++){
+            let newPos = curve[i];
+            if(newPos.x < margin || newPos.x > canvas.width-margin || newPos.y < margin || newPos.y > canvas.height-margin){
+                success = false;
+                break;
+            }
+        }
     }
 
     curves.push(curve);

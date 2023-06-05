@@ -17,17 +17,20 @@ export class Vector{
     add(vec){
         this.x += vec.x;
         this.y += vec.y;
+        return this;
     }
 
     sub(vec){
         this.x -= vec.x;
         this.y -= vec.y;
+        return this;
     }
 
     normalize(){
         let length = Math.sqrt(this.x*this.x + this.y*this.y);
         this.x /= length;
         this.y /= length;
+        return this;
     }
 
     rotate(angle){
@@ -35,6 +38,7 @@ export class Vector{
         let newY = this.x * Math.sin(angle) + this.y * Math.cos(angle);
         this.x = newX;
         this.y = newY;
+        return this;
     }
 
     clone(){
@@ -48,6 +52,7 @@ export class Vector{
     multiplyScalar(scalar){
         this.x *= scalar;
         this.y *= scalar;
+        return this;
     }
 
     length(){
