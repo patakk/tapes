@@ -208,7 +208,6 @@ void main() {
     result = result + .086*(-.5 + salt);
     result = clamp(result, 0., 1.);
 
-
     gl_FragColor = vec4(vec3(nnz), 1.);
     gl_FragColor = vec4(result.rgb, 1.);
 }

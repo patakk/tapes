@@ -10,29 +10,40 @@ let curves = [];
 let quads = [];
 let uvs = [];
 let infos = [];
+let transforms = [];
 
 let aspects = [
     3/4,
-    // 4/3,
+    4/3,
+    1/1,
 ]
 
 let SCALE;
 let ASPECT;
 let EDGE_OFFSET;
 let THICKNESS;
+let VERSION;
 
-function main() {
+let DIM = window.innerHeight*3;
+
+function main(options) {
+    
+    updateURLParameter('hash', btoa(JSON.stringify({"hash": hash, "aspect": Math.round(aaspect*10000)/10000, 'version': vversion})).toString('base64'));
+
     curves = [];
     quads = [];
     uvs = [];
     infos = [];
+    transforms = [];
     
     SCALE = 4;
-    ASPECT = aspects[Math.floor(prng.rand()*aspects.length)];
+    //ASPECT = aspects[Math.floor(prng.rand()*aspects.length)];
+    ASPECT = options.aspect;
+    VERSION = options.version;
+
     EDGE_OFFSET = 50;
     if(ASPECT >= 1)
         EDGE_OFFSET = window.innerHeight*.15;
-    EDGE_OFFSET = 0;
     THICKNESS = 70 * SCALE;
     THICKNESS = rand(10, 100) * SCALE;
 
@@ -41,6 +52,12 @@ function main() {
     onresize(null);
     if(!gl)
         gl = canvas.getContext('webgl', {preserveDrawingBuffer: true, antialias: true});
+
+    gl.canvas.width = DIM;
+    gl.canvas.height = Math.round(DIM/ASPECT);
+
+    console.log(canvas.width, canvas.height)
+
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
     setupCurves();
@@ -62,8 +79,10 @@ function render(){
     let positionAttributeLocation = gl.getAttribLocation(program, "a_position");
     let uvAttributeLocation = gl.getAttribLocation(program, "a_uv");
     let infoAttributeLocation = gl.getAttribLocation(program, "a_info");
+    let transformAttributeLocation = gl.getAttribLocation(program, "a_transform");
     let resolutionUniformLocation = gl.getUniformLocation(program, "u_resolution");
     let seedUniformLocation = gl.getUniformLocation(program, "u_seed");
+    let versionUniformLocation = gl.getUniformLocation(program, "u_version");
     // let colorUniformLocation = gl.getUniformLocation(program, "u_color");
 
     gl.uniform2f(resolutionUniformLocation, gl.canvas.width, gl.canvas.height);
@@ -71,10 +90,12 @@ function render(){
     let seed2 = prng.rand();
     let seed3 = prng.rand();
     gl.uniform3f(seedUniformLocation, seed1, seed2, seed3);
+    gl.uniform1f(versionUniformLocation, VERSION);
 
     let positionBuffer = gl.createBuffer();
     let uvBuffer = gl.createBuffer();
     let infoBuffer = gl.createBuffer();
+    let transformBuffer = gl.createBuffer();
     
     let type = gl.FLOAT;   // the data is 32bit floats
     let normalize = false; // don't normalize the data
@@ -94,6 +115,11 @@ function render(){
     gl.bufferData(gl.ARRAY_BUFFER, infos, gl.STATIC_DRAW);
     gl.enableVertexAttribArray(infoAttributeLocation);
     gl.vertexAttribPointer(infoAttributeLocation, 3, type, normalize, stride, offset);
+
+    // gl.bindBuffer(gl.ARRAY_BUFFER, transformBuffer);
+    // gl.bufferData(gl.ARRAY_BUFFER, transforms, gl.STATIC_DRAW);
+    // gl.enableVertexAttribArray(transformAttributeLocation);
+    // gl.vertexAttribPointer(transformAttributeLocation, 3, type, normalize, stride, offset);
 
     let framebuffer = gl.createFramebuffer();
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
@@ -236,6 +262,9 @@ function constructQuads(){
             let p2 = rightAnchors[j];
             let p3 = leftAnchors[j+1];
             let p4 = rightAnchors[j+1];
+
+            let offset_0 = p1.clone();
+            let angle_0 = Math.atan2(p3.y - p1.y, p3.x - p1.x); 
             
             let p13 = new Vector(p3.x - p1.x, p3.y - p1.y);
             let p34 = new Vector(p4.x - p3.x, p4.y - p3.y);
@@ -260,7 +289,7 @@ function constructQuads(){
                 np4 = p2.clone();
                 np3 = p1.clone().add(a1);
                 np2 = p1.clone(); //.add(p2).multiplyScalar(.5);
-                addquadpointstoattributes(np1, np2, np3, np4, [0, 0], [0, 1], [om1, 0], [om1, 1], avgdist, j);
+                addquadpointstoattributes(np1, np2, np3, np4, [0, 0], [0, 1], [om1, 0], [om1, 1], avgdist, j, offset_0, angle_0);
 
                 let dot2 = p34.dot(p31);
                 if(dot2 > 0.01){
@@ -271,7 +300,7 @@ function constructQuads(){
                     np7 = p3.clone();
                     np5 = p3.clone().add(a1);
                     np8 = p3.clone(); //.add(p4).multiplyScalar(.5);
-                    addquadpointstoattributes(np5, np6, np7, np8, [om2, 0], [om2, 1], [1, 0], [1, 1], avgdist, j);
+                    addquadpointstoattributes(np5, np6, np7, np8, [om2, 0], [om2, 1], [1, 0], [1, 1], avgdist, j, offset_0, angle_0);
                 }
                 else if(dot2 < -0.01){
                     let om2 = 1.-dot2/bb;
@@ -281,13 +310,13 @@ function constructQuads(){
                     np8 = p4.clone();
                     np6 = p4.clone().add(a1);
                     np7 = p4.clone(); //.add(p3).multiplyScalar(.5);
-                    addquadpointstoattributes(np5, np6, np7, np8, [om2, 0], [om2, 1], [1, 0], [1, 1], avgdist, j);
+                    addquadpointstoattributes(np5, np6, np7, np8, [om2, 0], [om2, 1], [1, 0], [1, 1], avgdist, j, offset_0, angle_0);
                 }
                 else{
                     np5 = p3.clone();
                     np6 = p4.clone();
                 }
-                addquadpointstoattributes(np3, np4, np5, np6, [om1, 0], [om1, 1], [1, 0], [1, 1], avgdist, j);
+                addquadpointstoattributes(np3, np4, np5, np6, [om1, 0], [om1, 1], [1, 0], [1, 1], avgdist, j, offset_0, angle_0);
             }
             else if(dot1 < -0.01){
                 let om1 = -dot1/bb;
@@ -297,7 +326,7 @@ function constructQuads(){
                 np3 = p1.clone();
                 np4 = p2.clone().add(a1);
                 np1 = p2.clone(); //.add(p1).multiplyScalar(.5);
-                addquadpointstoattributes(np1, np2, np3, np4, [0, 0], [0, 1], [om1, 0], [om1, 1], avgdist, j);
+                addquadpointstoattributes(np1, np2, np3, np4, [0, 0], [0, 1], [om1, 0], [om1, 1], avgdist, j, offset_0, angle_0);
 
                 let dot2 = p34.dot(p31);
                 if(dot2 > 0.01){
@@ -308,7 +337,7 @@ function constructQuads(){
                     np7 = p3.clone();
                     np5 = p3.clone().add(a1);
                     np8 = p3.clone(); //.add(p4).multiplyScalar(.5);
-                    addquadpointstoattributes(np5, np6, np7, np8, [om2, 0], [om2, 1], [1, 0], [1, 1], avgdist, j);
+                    addquadpointstoattributes(np5, np6, np7, np8, [om2, 0], [om2, 1], [1, 0], [1, 1], avgdist, j, offset_0, angle_0);
                 }
                 else if(dot2 < -0.01){
                     let om2 = 1.-dot2/bb;
@@ -318,13 +347,13 @@ function constructQuads(){
                     np8 = p4.clone();
                     np6 = p4.clone().add(a1);
                     np7 = p4.clone(); //.add(p3).multiplyScalar(.5);
-                    addquadpointstoattributes(np5, np6, np7, np8, [om2, 0], [om2, 1], [1, 0], [1, 1], avgdist, j);
+                    addquadpointstoattributes(np5, np6, np7, np8, [om2, 0], [om2, 1], [1, 0], [1, 1], avgdist, j, offset_0, angle_0);
                 }
                 else{
                     np5 = p3.clone();
                     np6 = p4.clone();
                 }
-                addquadpointstoattributes(np3, np4, np5, np6, [om1, 0], [om1, 1], [1, 0], [1, 1], avgdist, j);
+                addquadpointstoattributes(np3, np4, np5, np6, [om1, 0], [om1, 1], [1, 0], [1, 1], avgdist, j, offset_0, angle_0);
             }
             else{
                 np3 = p1.clone();
@@ -337,7 +366,7 @@ function constructQuads(){
                     np7 = p3.clone();
                     np5 = p3.clone().add(a1);
                     np8 = p3.clone(); //.add(p4).multiplyScalar(.5);
-                    addquadpointstoattributes(np5, np6, np7, np8, [om2, 0], [om2, 1], [1, 0], [1, 1], avgdist, j);
+                    addquadpointstoattributes(np5, np6, np7, np8, [om2, 0], [om2, 1], [1, 0], [1, 1], avgdist, j, offset_0, angle_0);
                 }
                 else if(dot2 < -0.01){
                     let om2 = 1.-dot2/bb;
@@ -347,13 +376,13 @@ function constructQuads(){
                     np8 = p4.clone();
                     np6 = p4.clone().add(a1);
                     np7 = p4.clone(); //.add(p3).multiplyScalar(.5);
-                    addquadpointstoattributes(np5, np6, np7, np8, [om2, 0], [om2, 1], [1, 0], [1, 1], avgdist, j);
+                    addquadpointstoattributes(np5, np6, np7, np8, [om2, 0], [om2, 1], [1, 0], [1, 1], avgdist, j, offset_0, angle_0);
                 }
                 else{
                     np5 = p3.clone();
                     np6 = p4.clone();
                 }
-                addquadpointstoattributes(np3, np4, np5, np6, [0, 0], [0, 1], [1, 0], [1, 1], avgdist, j);
+                addquadpointstoattributes(np3, np4, np5, np6, [0, 0], [0, 1], [1, 0], [1, 1], avgdist, j, offset_0, angle_0);
                 // addquadpointstoattributes(p1, p2, p3, p4);
             }
 
@@ -372,7 +401,7 @@ function constructQuads(){
     infos = new Float32Array(flatten(infos));
 }
 
-function addquadpointstoattributes(p1, p2, p3, p4, uv1=[0,0], uv2=[0,1], uv3=[1,0], uv4=[1,1], avgdist=1., j=0){
+function addquadpointstoattributes(p1, p2, p3, p4, uv1=[0,0], uv2=[0,1], uv3=[1,0], uv4=[1,1], avgdist=1., j=0, offset_0=new Vector(0, 0), angle_0=0){
     quads.push(
         [
             [p1.x, p1.y],
@@ -382,10 +411,16 @@ function addquadpointstoattributes(p1, p2, p3, p4, uv1=[0,0], uv2=[0,1], uv3=[1,
         ]
     );
 
-    uv1 = [uv1[0]*avgdist, uv1[1]*avgdist];
-    uv2 = [uv2[0]*avgdist, uv2[1]*avgdist];
-    uv3 = [uv3[0]*avgdist, uv3[1]*avgdist];
-    uv4 = [uv4[0]*avgdist, uv4[1]*avgdist];
+    let maxscale = 3/Math.max(gl.canvas.width, gl.canvas.height);
+    uv1 = p1.clone().sub(offset_0).rotate(-angle_0).multiplyScalar(maxscale);
+    uv2 = p2.clone().sub(offset_0).rotate(-angle_0).multiplyScalar(maxscale);
+    uv3 = p3.clone().sub(offset_0).rotate(-angle_0).multiplyScalar(maxscale);
+    uv4 = p4.clone().sub(offset_0).rotate(-angle_0).multiplyScalar(maxscale);
+
+    uv1 = [uv1.x, uv1.y];
+    uv2 = [uv2.x, uv2.y];
+    uv3 = [uv3.x, uv3.y];
+    uv4 = [uv4.x, uv4.y];
 
     let d1 = Math.sqrt(Math.pow(p1.x - p3.x, 2) + Math.pow(p1.y - p3.y, 2));
     let d2 = Math.sqrt(Math.pow(p2.x - p4.x, 2) + Math.pow(p2.y - p4.y, 2));
@@ -454,18 +489,20 @@ function setupCurves(){
     let ctries = 0;
     let curve = [];
     let pathsteps = Math.round(rand(2, 6))*2;
+
+    let aaa = DIM;
+    let bbb = Math.floor(DIM/ASPECT);
+    let margin = aaa*.12;
+
     while(!success && ctries++ < 100){
-        let pos = new Vector(canvas.width/2 + rand(-222, 222), canvas.height/2 + rand(-222, 222));
+        let pos = new Vector(aaa/2 + rand(-222, 222), bbb/2 + rand(-222, 222));
         let direction0 = new Vector(rand(-1, 1), rand(-1, 1));
         direction0.normalize();
 
         curve = [];
-        let center = new Vector(canvas.width/2, canvas.height/2);
+        let center = new Vector(aaa/2, bbb/2);
 
-        let margin = canvas.width*.07;
-        let sumpoints = new Vector(0, 0);
         curve.push(pos);
-        sumpoints.add(pos);
         for(let i = 0; i < pathsteps; i++){
             let direction = direction0.clone();
             direction.rotate(map(power(rand(0, 1), 3), 0, 1, Math.PI/2, Math.PI*3/2));
@@ -473,7 +510,7 @@ function setupCurves(){
             direction.multiplyScalar(SCALE*rand(400, 1400)*.5);
             let newPos = new Vector(pos.x + direction.x, pos.y + direction.y);
             let tries = 0;
-            while(tries++ < 130 && (newPos.x < margin || newPos.x > canvas.width-margin || newPos.y < margin || newPos.y > canvas.height-margin || intersects(newPos, curve))){
+            while(tries++ < 130 && (newPos.x < margin || newPos.x > aaa-margin || newPos.y < margin || newPos.y > bbb-margin || intersects(newPos, curve))){
                 direction = direction0.clone();
                 direction.rotate(map(power(rand(0, 1), 3), 0, 1, Math.PI/2, Math.PI*3/2));
                 direction.normalize();
@@ -483,18 +520,51 @@ function setupCurves(){
             direction0 = direction.clone();
             pos = newPos;
             curve.push(newPos);
-            sumpoints.add(newPos);
         }
-        sumpoints.multiplyScalar(1/(pathsteps+1));
+        let width = 0;
+        let height = 0;
+        let maxwidth = aaa-margin*2;
+        let maxheight = bbb-margin*2;
+        let minx = 999999;
+        let maxx = -999999;
+        let miny = 999999;
+        let maxy = -999999;
         for(let i = 0; i < curve.length; i++){
-            curve[i].sub(sumpoints);
+            let p = curve[i];
+            if(p.x < minx) minx = p.x;
+            if(p.x > maxx) maxx = p.x;
+            if(p.y < miny) miny = p.y;
+            if(p.y > maxy) maxy = p.y;
+        }
+        let middle = new Vector((minx+maxx)/2, (miny+maxy)/2);
+        width = maxx - minx;
+        height = maxy - miny;
+        let scx = width/maxwidth;
+        let scy = height/maxheight;
+        let sc = Math.max(scx, scy);
+        for(let i = 0; i < curve.length; i++){
+            let p = curve[i];
+            if(sc > 1){
+                p.x /= sc;
+                p.y /= sc;
+            }
+        }
+
+        // let sumpoints = new Vector(0, 0);
+        // for(let i = 0; i < curve.length; i++){
+        //     sumpoints.add(curve[i]);
+        // }
+        // sumpoints.multiplyScalar(1/curve.length);
+
+        for(let i = 0; i < curve.length; i++){
+            curve[i].sub(middle);
             curve[i].add(center);
         }
 
         success = true;
         for(let i = 0; i < curve.length; i++){
             let newPos = curve[i];
-            if(newPos.x < margin || newPos.x > canvas.width-margin || newPos.y < margin || newPos.y > canvas.height-margin){
+            if(newPos.x < margin || newPos.x > aaa-margin || newPos.y < margin || newPos.y > bbb-margin){
                 success = false;
                 break;
             }
@@ -535,8 +605,8 @@ function handleWindowSize(){
         sw = Math.round(clientWidth) - EDGE_OFFSET*2;
         sh = Math.round(sw / aspect);
     }
-    canvas.width = sw*SCALE;
-    canvas.height = sh*SCALE;
+    canvas.width = sw;
+    canvas.height = sh;
     canvas.style.width = sw + 'px';
     canvas.style.height = sh + 'px';
     canvas.style.position = 'absolute';
@@ -560,17 +630,58 @@ function power(p, g) {
         return 1 - 0.5 * Math.pow(2*(1 - p), g);
 }
 
+function runmain(){
+    main({'aspect': aaspect, 'version': vversion});
+}
+
 // on load html, no jquery
-window.onload = main;
+window.onload = runmain;
 window.addEventListener('resize', onresize, false);
+
+function initRandomState(){
+    hash = (Math.random() + 1).toString(16).substring(2);
+    editionNumber = p.editionNumber || 0;
+
+    Random=function(n){var r,$,t,u,_=function n(r){for(var $=0,t=1779033703^r.length;$<r.length;$++)t=(t=Math.imul(t^r.charCodeAt($),3432918353))<<13|t>>>19;return function(){return t=Math.imul((t=Math.imul(t^t>>>16,2246822507))^t>>>13,3266489909),(t^=t>>>16)>>>0}}(n),o={rand:(r=_(),$=_(),t=_(),u=_(),function(){t|=0;var n=((r|=0)+($|=0)|0)+(u|=0)|0;return u=u+1|0,r=$^$>>>9,$=t+(t<<3)|0,t=(t=t<<21|t>>>11)+n|0,(n>>>0)/4294967296}),randInt:function(n,r){return n+Math.floor((r-n)*o.rand())}};return o};
+    prng = Random(hash);
+    random = prng.rand;
+}
 
 // handle keys
 document.addEventListener('keydown', function(event) {
-    if(event.key == 'q') {
-        main();
-    }
+
     if(event.key == 's') {
         save();
+    }
+    else if ('a123456'.indexOf(event.key) !== -1) {
+        if(event.key == '1') {
+            vversion = 0;
+        }
+        if(event.key == '2') {
+            vversion = 1;
+        }
+        if(event.key == '3') {
+            vversion = 2;
+        }
+        if(event.key == '4') {
+            vversion = 3;
+        }
+        if(event.key == '5') {
+            vversion = 4;
+        }
+        if(event.key == '6') {
+            vversion = 5;
+        }
+        if(event.key == 'a') {
+            if(aaspect > 1)
+                aaspect = 3/4;
+            else
+                aaspect = 4/3;
+        }
+
+        initRandomState();
+        // updateURLParameter('hash', btoa(JSON.stringify({"hash": hash, "aspect": Math.round(aaspect*10000)/10000, 'version': vversion})).toString('base64'));
+        main({'aspect': aaspect, 'version': vversion});
     }
 });
 
@@ -579,7 +690,7 @@ function save(){
     console.log('preparing canvas for saving...');
     const dataURL = canvas.toDataURL('image/png');
     const link = document.createElement('a');
-    link.download = 'render.png';
+    link.download = 'render_' + btoa(JSON.stringify({"hash": hash,"aspect": Math.round(ASPECT*10000)/10000, 'version': VERSION})).toString('base64') + '.png';
     // link.href = imgElement.src;
     link.href = dataURL;
     link.click();

@@ -1,6 +1,7 @@
 attribute vec2 a_position;
 attribute vec2 a_uv;
 attribute vec3 a_info;
+// attribute vec3 a_transform;
 
 uniform vec2 u_resolution;
 uniform vec3 u_seed;
