@@ -243,7 +243,7 @@ void main() {
         float uvx = v_uv.x + .1*fbm3(v_uv.xy*3., v_info.x*0.1);
         float oo = hash12(vec2(v_info.x*0.4, v_info.y*0.4))*0.;
         float ix = floor(uvx*(111.+177.*oo));
-        float rr = .2+.7*mod(ix, 2.);
+        float rr = .05+.9*mod(ix, 2.);
         gl_FragColor = vec4(vec3(rr, rr, rr), 1.0);  // RGBA, purple color
     }
     if(u_seed.z < 0.001 && abs(u_version-3.0) < 0.001){

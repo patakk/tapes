@@ -5,6 +5,7 @@
     <meta charset="utf-8"/>
     <link rel="shortcut icon" href="#">
     <title>hello!</title>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400&amp;display=swap" rel="stylesheet">
     <script id="hash-snippet">
         let search = new URLSearchParams(window.location.search);
         let q = search.get("hash");
@@ -43,10 +44,51 @@
         canvas {
             display: block;
         }
+        
+        #overlay {
+            position: absolute;
+            top: 50px;
+            left: 50px;
+            font-size: 15px;
+            font-family: 'Courier Prime', monospace;
+            color: black;
+            user-select: none; /* make it non-selectable */
+        }
     </style>
 </head>
 
 <body>
+    <div id="overlay">
+        <table>
+            <tr>
+                <td>1 - colored version</td>
+            </tr>
+            <tr>
+                <td>2 - color and noise</td>
+            </tr>
+            <tr>
+                <td>3 - color and zebra</td>
+            </tr>
+            <tr>
+                <td>4 - color and grid</td>
+            </tr>
+            <tr>
+                <td>5 - zebra</td>
+            </tr>
+            <tr>
+                <td>6 - grid</td>
+            </tr>
+            <tr>
+                <td> </td>
+            </tr>
+            <tr>
+                <td>a - toggle aspect ratio</td>
+            </tr>
+            <tr>
+                <td>s - save</td>
+            </tr>
+        </table>
+    </div>
     <canvas id="canvas"></canvas>
     <script type="module" src="./script.js"></script>
 </body>
