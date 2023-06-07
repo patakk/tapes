@@ -46,6 +46,7 @@ function main(options) {
     if(ASPECT >= 1)
         EDGE_OFFSET = window.innerHeight*.15;
     THICKNESS = 70 * SCALE;
+    THICKNESS = rand(66, 77) * SCALE;
     THICKNESS = rand(10, 70) * SCALE;
 
     if(!canvas)
@@ -106,6 +107,10 @@ function render(){
 
 
     gl.useProgram(program);
+
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
     let positionAttributeLocation = gl.getAttribLocation(program, "a_position");
     let uvAttributeLocation = gl.getAttribLocation(program, "a_uv");
     let infoAttributeLocation = gl.getAttribLocation(program, "a_info");
@@ -114,6 +119,7 @@ function render(){
     let resolutionUniformLocation = gl.getUniformLocation(program, "u_resolution");
     let seedUniformLocation = gl.getUniformLocation(program, "u_seed");
     let versionUniformLocation = gl.getUniformLocation(program, "u_version");
+    let infoUniformLocation = gl.getUniformLocation(program, "u_info");
     var randomTextureLocation = gl.getUniformLocation(program, "u_randomTexture");
     var randomTextureSizeLocation = gl.getUniformLocation(program, "u_randomTextureSize");
 
@@ -181,6 +187,8 @@ function render(){
 
     gl.clearColor(0.898, 0.827, 0.675, 1);
     gl.clearColor(rand(.9, .93), rand(.9, .92), rand(.89, .91), 1);
+    gl.clearColor(rand(.3, .9), rand(.3, .9), rand(.3, .9), 1);
+    gl.clearColor(0.04, 0.05, 0.05, 1);
     gl.clearColor(rand(.92, .93), rand(.92, .92), rand(.9, .91), 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
     let numQuads = quads.length / 8;
@@ -188,6 +196,7 @@ function render(){
     for(let i = 0; i < numQuads; i++) {
         const offset = i * 4; // 4 vertices per quad
         gl.uniform3f(seedUniformLocation, seed1, seed2, seed3*(infos[offset*3]%2==1));
+        gl.uniform3f(infoUniformLocation, i, i, i);
         gl.drawArrays(gl.TRIANGLE_STRIP, offset, 4);
     }
 
@@ -544,21 +553,21 @@ function setupCurves(options){
         direction0.normalize();
 
         curve = [];
-        let center = new Vector(aaa/2, bbb/2);
+        let center = new Vector(aaa*.5, bbb*.5);
 
         curve.push(pos);
         for(let i = 0; i < pathsteps; i++){
             let direction = direction0.clone();
             direction.rotate(map(power(rand(0, 1), 3), 0, 1, Math.PI/2, Math.PI*3/2));
             direction.normalize();
-            direction.multiplyScalar(SCALE*rand(400, 1400)*.5);
+            direction.multiplyScalar(SCALE*rand(400, 1400)*.25);
             let newPos = new Vector(pos.x + direction.x, pos.y + direction.y);
             let tries = 0;
             while(tries++ < 130 && (newPos.x < margin || newPos.x > aaa-margin || newPos.y < margin || newPos.y > bbb-margin || intersects(newPos, curve))){
                 direction = direction0.clone();
                 direction.rotate(map(power(rand(0, 1), 3), 0, 1, Math.PI/2, Math.PI*3/2));
                 direction.normalize();
-                direction.multiplyScalar(SCALE*rand(400, 1400)*.5);
+                direction.multiplyScalar(SCALE*rand(400, 1400)*.25);
                 newPos = new Vector(pos.x + direction.x, pos.y + direction.y);
             }
             direction0 = direction.clone();
@@ -612,6 +621,9 @@ function setupCurves(options){
                 success = false;
                 break;
             }
+        }
+        for(let i = 0; i < curve.length; i++){
+            // curve[i].add(new Vector(0, -bbb*random(-.1,.5)));
         }
     }
     console.log(ctries)
@@ -682,11 +694,14 @@ function runmain(){
 window.onload = runmain;
 window.addEventListener('resize', onresize, false);
 
-function initRandomState(){
+function randomizeState(){
     hash = (Math.random() + 1).toString(16).substring(2);
     editionNumber = p.editionNumber || 0;
 
     Random=function(n){var r,$,t,u,_=function n(r){for(var $=0,t=1779033703^r.length;$<r.length;$++)t=(t=Math.imul(t^r.charCodeAt($),3432918353))<<13|t>>>19;return function(){return t=Math.imul((t=Math.imul(t^t>>>16,2246822507))^t>>>13,3266489909),(t^=t>>>16)>>>0}}(n),o={rand:(r=_(),$=_(),t=_(),u=_(),function(){t|=0;var n=((r|=0)+($|=0)|0)+(u|=0)|0;return u=u+1|0,r=$^$>>>9,$=t+(t<<3)|0,t=(t=t<<21|t>>>11)+n|0,(n>>>0)/4294967296}),randInt:function(n,r){return n+Math.floor((r-n)*o.rand())}};return o};
+}
+
+function initRandomState(){
     prng = Random(hash);
     random = prng.rand;
 }
@@ -722,7 +737,9 @@ document.addEventListener('keydown', function(event) {
             else
                 aaspect = 4/3;
         }
-
+        if ('q123456'.indexOf(event.key) !== -1){
+            randomizeState();
+        }
         initRandomState();
         // updateURLParameter('hash', btoa(JSON.stringify({"hash": hash, "aspect": Math.round(aaspect*10000)/10000, 'version': vversion})).toString('base64'));
         main({'aspect': aaspect, 'version': vversion});

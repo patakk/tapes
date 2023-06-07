@@ -197,12 +197,12 @@ void main() {
     vec3 blurred2 = blur2(v_uv, u_resolution, 1., .1);
 
     vec3 result = blurred1;
-    result = result + (colorshifted - result)*.0;
+    result = result + (vec3(1.) - result)*.0;
 
     vec2 abspos = v_uv * u_resolution;
     float marg = u_resolution.x * .02;
     if(abspos.x < marg || abspos.x > u_resolution.x - marg || abspos.y < marg || abspos.y > u_resolution.y - marg){
-        result = vec3(1.);
+        result = vec3(.15);
     }
 
     result = result + .086*(-.5 + salt);
