@@ -12,8 +12,9 @@ varying vec2 v_uv;
 varying vec3 v_info;
 
 void main() {
-    vec2 position = a_position / u_simulation * 2. - 1.;
+    vec2 position = (a_position) / u_simulation * 2. - 1.;
 
+    gl_PointSize = 10.0;
     gl_Position = vec4(position*1., 0, 1);
     v_uv = a_uv;
     v_info = a_info;

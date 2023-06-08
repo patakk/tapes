@@ -26,6 +26,7 @@ let VERSION;
 
 let DIM = 2000;
 let REN = window.innerHeight*2;
+REN = 4000;
 
 function main(options) {
     
@@ -107,7 +108,7 @@ function render(){
 
 
     gl.useProgram(program);
-
+    gl.lineWidth(11);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
@@ -334,112 +335,7 @@ function constructQuads(){
             let p12 = new Vector(p2.x - p1.x, p2.y - p1.y);
             let dot1 = p12.dot(p13);
             let np1, np2, np3, np4, np5, np6, np7, np8;
-            if(dot1 > 0.01){
-                let om1 = dot1/aa;
-                let a1 = p13.clone();
-                a1.multiplyScalar(dot1);
-                np1 = p1.clone();
-                np4 = p2.clone();
-                np3 = p1.clone().add(a1);
-                np2 = p1.clone(); //.add(p2).multiplyScalar(.5);
-                addquadpointstoattributes(np1, np2, np3, np4, [0, 0], [0, 1], [om1, 0], [om1, 1], avgdist, j, offset_0, angle_0);
-
-                let dot2 = p34.dot(p31);
-                if(dot2 > 0.01){
-                    let om2 = 1.-dot2/aa;
-                    let a1 = p31.clone();
-                    a1.multiplyScalar(dot2);
-                    np6 = p4.clone();
-                    np7 = p3.clone();
-                    np5 = p3.clone().add(a1);
-                    np8 = p3.clone(); //.add(p4).multiplyScalar(.5);
-                    addquadpointstoattributes(np5, np6, np7, np8, [om2, 0], [om2, 1], [1, 0], [1, 1], avgdist, j, offset_0, angle_0);
-                }
-                else if(dot2 < -0.01){
-                    let om2 = 1.-dot2/bb;
-                    let a1 = p42.clone();
-                    a1.multiplyScalar(-dot2);
-                    np5 = p3.clone();
-                    np8 = p4.clone();
-                    np6 = p4.clone().add(a1);
-                    np7 = p4.clone(); //.add(p3).multiplyScalar(.5);
-                    addquadpointstoattributes(np5, np6, np7, np8, [om2, 0], [om2, 1], [1, 0], [1, 1], avgdist, j, offset_0, angle_0);
-                }
-                else{
-                    np5 = p3.clone();
-                    np6 = p4.clone();
-                }
-                addquadpointstoattributes(np3, np4, np5, np6, [om1, 0], [om1, 1], [1, 0], [1, 1], avgdist, j, offset_0, angle_0);
-            }
-            else if(dot1 < -0.01){
-                let om1 = -dot1/bb;
-                let a1 = p24.clone();
-                a1.multiplyScalar(-dot1);
-                np2 = p2.clone();
-                np3 = p1.clone();
-                np4 = p2.clone().add(a1);
-                np1 = p2.clone(); //.add(p1).multiplyScalar(.5);
-                addquadpointstoattributes(np1, np2, np3, np4, [0, 0], [0, 1], [om1, 0], [om1, 1], avgdist, j, offset_0, angle_0);
-
-                let dot2 = p34.dot(p31);
-                if(dot2 > 0.01){
-                    let om2 = 1.-dot2/aa;
-                    let a1 = p31.clone();
-                    a1.multiplyScalar(dot2);
-                    np6 = p4.clone();
-                    np7 = p3.clone();
-                    np5 = p3.clone().add(a1);
-                    np8 = p3.clone(); //.add(p4).multiplyScalar(.5);
-                    addquadpointstoattributes(np5, np6, np7, np8, [om2, 0], [om2, 1], [1, 0], [1, 1], avgdist, j, offset_0, angle_0);
-                }
-                else if(dot2 < -0.01){
-                    let om2 = 1.-dot2/bb;
-                    let a1 = p42.clone();
-                    a1.multiplyScalar(-dot2);
-                    np5 = p3.clone();
-                    np8 = p4.clone();
-                    np6 = p4.clone().add(a1);
-                    np7 = p4.clone(); //.add(p3).multiplyScalar(.5);
-                    addquadpointstoattributes(np5, np6, np7, np8, [om2, 0], [om2, 1], [1, 0], [1, 1], avgdist, j, offset_0, angle_0);
-                }
-                else{
-                    np5 = p3.clone();
-                    np6 = p4.clone();
-                }
-                addquadpointstoattributes(np3, np4, np5, np6, [om1, 0], [om1, 1], [1, 0], [1, 1], avgdist, j, offset_0, angle_0);
-            }
-            else{
-                np3 = p1.clone();
-                np4 = p2.clone();let dot2 = p34.dot(p31);
-                if(dot2 > 0.01){
-                    let om2 = 1.-dot2/aa;
-                    let a1 = p31.clone();
-                    a1.multiplyScalar(dot2);
-                    np6 = p4.clone();
-                    np7 = p3.clone();
-                    np5 = p3.clone().add(a1);
-                    np8 = p3.clone(); //.add(p4).multiplyScalar(.5);
-                    addquadpointstoattributes(np5, np6, np7, np8, [om2, 0], [om2, 1], [1, 0], [1, 1], avgdist, j, offset_0, angle_0);
-                }
-                else if(dot2 < -0.01){
-                    let om2 = 1.-dot2/bb;
-                    let a1 = p42.clone();
-                    a1.multiplyScalar(-dot2);
-                    np5 = p3.clone();
-                    np8 = p4.clone();
-                    np6 = p4.clone().add(a1);
-                    np7 = p4.clone(); //.add(p3).multiplyScalar(.5);
-                    addquadpointstoattributes(np5, np6, np7, np8, [om2, 0], [om2, 1], [1, 0], [1, 1], avgdist, j, offset_0, angle_0);
-                }
-                else{
-                    np5 = p3.clone();
-                    np6 = p4.clone();
-                }
-                addquadpointstoattributes(np3, np4, np5, np6, [0, 0], [0, 1], [1, 0], [1, 1], avgdist, j, offset_0, angle_0);
-                // addquadpointstoattributes(p1, p2, p3, p4);
-            }
-
-            // addquadpointstoattributes(p1, p2, p3, p4);
+            addquadpointstoattributes(p1, p2, p3, p4, [0, 0], [0, 1], [1, 0], [1, 1], avgdist, j, offset_0, angle_0);
         }
     }
 

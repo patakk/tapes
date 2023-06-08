@@ -260,6 +260,7 @@ void main() {
     alpha = 1.;
 
     gl_FragColor = vec4(0.0,0.0,0.0, 1.0);  // RGBA, purple color
+    // res *= .3 + (1.-.3)*(1.-pow(v_uv.x, 3.));
     gl_FragColor = vec4(res, alpha);  // RGBA, purple color
     if(u_seed.z < 0.001 && abs(u_version-1.0) < 0.001){
         float hhhs = hash12(vec2(v_uv.x*.01, v_uv.y*.01));
@@ -282,23 +283,25 @@ void main() {
         // float thinfilm = abs(mod(ix, 2.)-mod(ix2, 2.));
         // rr1 = clamp(rr1 + thinfilm, 0., 1.);
         // gl_FragColor = vec4(vec3(ooo, ooo, ooo), 1.0);  // RGBA, purple color
+        rr1 *= .9 + (1.-.9)*(1.-v_uv.x);
         gl_FragColor = vec4(vec3(rr1, rr1, rr1), alpha);  // RGBA, purple color
     }
     if(u_seed.z < 0.001 && abs(u_version-3.0) < 0.001 || abs(u_version-5.0) < 0.001){
         float rnd = rand(vec2(v_uv.x, v_uv.y));
         float var = v_uv.x;
         float oo = hash12(vec2(v_info.x*0.4, v_info.y*0.4)) * 0. + 1.;
-        float ix = floor(v_uv.x*(111.+77.*oo));
-        float iy = floor(v_uv.y*(111.+77.*oo));
-        float rr = .15 + .8*(mod(ix, 2.) * (mod(iy, 2.)));
+        float ix = floor(v_uv.x*(99.+77.*oo));
+        float iy = floor(v_uv.y*(99.+77.*oo));
+        float rr = clamp(.05 + (mod(ix,  3.) * (mod(iy, 3.))), 0., 1.);
+        rr *= .9 + (1.-.9)*(1.-v_uv.x);
         gl_FragColor = vec4(vec3(rr, rr, rr), alpha);  // RGBA, purple color
     }
     // gl_FragColor = vec4(randomcolor, 1.0);  // RGBA, purple color
      //gl_FragColor = vec4(vec3(nz2), 1.0);  // RGBA, purple color
-
     // gl_FragColor = vec4(v_uv.x, v_uv.y, 0., 1.0);  // RGBA, purple color
     // float randValue = clamp(hcrandom(v_uv.xyx).r, 0., 1.);
     // gl_FragColor = vec4(vec3(randValue), 1.0);  // RGBA, purple color
+    // gl_FragColor = vec4(vec3(v_uv.x, v_uv.y, 0.), alpha);  // RGBA, purple color
 }
 
 void main2() {
