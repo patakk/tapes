@@ -218,7 +218,7 @@ void main() {
     vec3 c2 = vec3(r, g, b);
 
     float nz = power(clamp(simplex3d(vec3(v_uv.x*0.94*2., v_uv.y*0.94, u_seed.x+vix*20.)), 0., 1.), 5.);
-    float nz2 = .05*power(clamp(simplex3d(vec3(v_uv.x*0.34*2.+29., v_uv.y*2.94, u_seed.x+vix*20.+131.31)), 0., 1.), 5.);
+    float nz2 = .15*power(clamp(simplex3d(vec3(v_uv.x*0.14*2.+29., v_uv.y*1.14, u_seed.x+vix*20.+131.31)), 0., 1.), 5.);
     vec3 res = c0;
     res = res + (c2-res)*nz2;
 

@@ -205,7 +205,7 @@ void main() {
         result = vec3(.15);
     }
 
-    result = result + .086*(-.5 + salt);
+    result = result + .126*(-.5 + salt);
     result = clamp(result, 0., 1.);
 
     gl_FragColor = vec4(vec3(nnz), 1.);

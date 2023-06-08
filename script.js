@@ -26,7 +26,6 @@ let VERSION;
 
 let DIM = 2000;
 let REN = window.innerHeight*2;
-REN = 4000;
 
 function main(options) {
     
