@@ -193,17 +193,24 @@ void main() {
     
     float xx;
 
-    xx = var;
-    r = 0.0+0.999*power(smoothstep(.2, .8, simplex3d(vec3(xx, xx, u_seed.x*100.+vix*20.))), 3.);
-    g = 0.0+0.999*power(smoothstep(.2, .8, simplex3d(vec3(xx, xx, u_seed.y*100.+vix*20.))), 3.);
-    b = 0.0+0.999*power(smoothstep(.2, .8, simplex3d(vec3(xx, xx, u_seed.z*100.+vix*20.))), 3.);
+    float sm1 = .1;
+    float sm2 = .9;
+    float pw = 1.;
+    float shiftr = u_seed.x*12.;
+    float shiftg = u_seed.y*12.;
+    float shiftb = u_seed.z*12.;
 
-    vec3 c0 = vec3(r, g, b);
+    xx = var*1.1;
+    r = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, shiftr+vix*20.))), pw);
+    g = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, shiftg+vix*20.))), pw);
+    b = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, shiftb+vix*20.))), pw);
+
+    vec3 c0 = vec3(r,g,b);
 
     xx = var + hash12(v_uv.xx*4.4+hash12(v_uv.xx*4.4)) * 0.07;
-    r = 0.0+0.999*power(smoothstep(.2, .8, simplex3d(vec3(xx, xx, u_seed.x*100.+vix*20.))), 3.);
-    g = 0.0+0.999*power(smoothstep(.2, .8, simplex3d(vec3(xx, xx, u_seed.y*100.+vix*20.))), 3.);
-    b = 0.0+0.999*power(smoothstep(.2, .8, simplex3d(vec3(xx, xx, u_seed.z*100.+vix*20.))), 3.);
+    r = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, u_seed.x*100.+vix*20.))), pw);
+    g = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, u_seed.y*100.+vix*20.))), pw);
+    b = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, u_seed.z*100.+vix*20.))), pw);
 
     vec3 c1 = vec3(r, g, b);
     
@@ -211,9 +218,9 @@ void main() {
 
     xx = var + hash12(v_uv.xx) * 0.0;
     xx += .019*(-.5 + hash12(vec2(floor(v_uv.x*strk)/1.)));
-    r = 0.0+0.999*power(smoothstep(.2, .8, simplex3d(vec3(xx, xx, u_seed.x*100.+vix*20.))), 3.);
-    g = 0.0+0.999*power(smoothstep(.2, .8, simplex3d(vec3(xx, xx, u_seed.y*100.+vix*20.))), 3.);
-    b = 0.0+0.999*power(smoothstep(.2, .8, simplex3d(vec3(xx, xx, u_seed.z*100.+vix*20.))), 3.);
+    r = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, u_seed.x*100.+vix*20.))), pw);
+    g = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, u_seed.y*100.+vix*20.))), pw);
+    b = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, u_seed.z*100.+vix*20.))), pw);
 
     vec3 c2 = vec3(r, g, b);
 
@@ -221,6 +228,7 @@ void main() {
     float nz2 = .15*power(clamp(simplex3d(vec3(v_uv.x*0.14*2.+29., v_uv.y*1.14, u_seed.x+vix*20.+131.31)), 0., 1.), 5.);
     vec3 res = c0;
     res = res + (c2-res)*nz2;
+    res = c0;
 
     vec3 randomcolor = vec3(
         .3 + .7*hash12(vec2(v_info.x*0.+u_seed.x)),
@@ -228,7 +236,7 @@ void main() {
         .3 + .7*hash12(vec2(v_info.x*0.+u_seed.x+31.1))
     );
 
-    res = res + (1.-res)*.2;
+    res = res + (1.-res)*.0;
 
     float gr = pow(hash12(vec2(floor(v_uv.x*1.)/1.)), 9.);
     gr = clamp(smoothstep(.3, .5, gr), 0., 1.)*.2;
@@ -295,6 +303,38 @@ void main() {
         float rr = clamp(.05 + (mod(ix,  3.) * (mod(iy, 3.))), 0., 1.);
         rr *= .9 + (1.-.9)*(1.-v_uv.x);
         gl_FragColor = vec4(vec3(rr, rr, rr), alpha);  // RGBA, purple color
+    }
+    if(abs(u_version-6.0) < 0.001){
+        vec2 varr = v_uv.xy*1.5;
+
+        float ooo = power(clamp(simplex3d(vec3(varr.x, varr.y, u_seed.x*100.+vix*20. + 551.55)), 0., 1.), 3.);
+        ooo = fbm3(varr.xy*3., v_info.x*0.1);
+        // ooo = floor(ooo*(111.+177.*oo));
+        ooo = smoothstep(.25, .75, ooo);
+        // ooo = smoothstep(.475, .525, ooo);
+
+        float uvx = varr.y + .07*fbm3(varr.xy*3., v_info.x*0.1);
+        float uvx2 = varr.y + .07*fbm3(varr.xy*3.-vec2(0., 0.06), v_info.x*0.1);
+        float oo = hash12(vec2(v_info.x*110.4, v_info.y*110.4));
+        float ix = (uvx*(77.+36.*oo*2.+1.));
+        float ix2 = (uvx2*(77.+36.*oo*2.+1.));
+        float rr1 = (.1 + .1*ooo)+.8*smoothstep(.8, 1.2, mod(ix, 2.));
+        float rr2 = (.1 + .1*ooo)+.8*smoothstep(.8, 1.2, mod(ix2, 2.));
+        rr2 = 0.0;
+        // if(floor(ix/2.) < -5. && u_seed.z > 0.001 || floor(ix/2.) > -1. && u_seed.z > 0.001){
+        //     alpha = 0.;
+        // }
+        if((ix < 12.-floor(12.*u_seed.y) || ix > 15.) && u_seed.z < 0.001){
+            alpha = 0.;
+        }
+        rr1 *= .9 + (1.-.9)*(1.-varr.x);
+        gl_FragColor = vec4(vec3(rr1, rr1, rr1), alpha);  // RGBA, purple color
+        // if((ix > -7. || ix < -18.) && u_seed.z >= 0.001){
+        //     alpha = 0.;
+        // }
+        // float thinfilm = abs(mod(ix, 2.)-mod(ix2, 2.));
+        // rr1 = clamp(rr1 + thinfilm, 0., 1.);
+        // gl_FragColor = vec4(vec3(ooo, ooo, ooo), 1.0);  // RGBA, purple color
     }
     // gl_FragColor = vec4(randomcolor, 1.0);  // RGBA, purple color
      //gl_FragColor = vec4(vec3(nz2), 1.0);  // RGBA, purple color

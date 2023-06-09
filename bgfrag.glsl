@@ -200,7 +200,7 @@ void main() {
     result = result + (vec3(1.) - result)*.0;
 
     vec2 abspos = v_uv * u_resolution;
-    float marg = u_resolution.x * .02;
+    float marg = u_resolution.x * .01;
     if(abspos.x < marg || abspos.x > u_resolution.x - marg || abspos.y < marg || abspos.y > u_resolution.y - marg){
         result = vec3(.15);
     }

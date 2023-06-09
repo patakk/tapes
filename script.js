@@ -1,5 +1,4 @@
 
-import {noise} from "./noise.js";
 import {getShaderSource, createShader, createProgram} from "./webglutils.js";
 import { Vector, Quad } from "./utils.js";
 
@@ -436,7 +435,7 @@ function setupCurves(options){
     let success = false;
     let ctries = 0;
     let curve = [];
-    let pathsteps = Math.round(rand(2, 6))*2;
+    let pathsteps = Math.round(rand(4, 6))*2;
 
     let aaa = DIM;
     let bbb = Math.floor(DIM/ASPECT);
@@ -607,7 +606,7 @@ document.addEventListener('keydown', function(event) {
     if(event.key == 's') {
         save();
     }
-    else if ('qa123456'.indexOf(event.key) !== -1) {
+    else if ('qa1234567'.indexOf(event.key) !== -1) {
         if(event.key == '1') {
             vversion = 0;
         }
@@ -626,13 +625,16 @@ document.addEventListener('keydown', function(event) {
         if(event.key == '6') {
             vversion = 5;
         }
+        if(event.key == '7') {
+            vversion = 6;
+        }
         if(event.key == 'a') {
             if(aaspect > 1)
                 aaspect = 3/4;
             else
                 aaspect = 4/3;
         }
-        if ('q123456'.indexOf(event.key) !== -1){
+        if ('q1234567'.indexOf(event.key) !== -1){
             randomizeState();
         }
         initRandomState();
