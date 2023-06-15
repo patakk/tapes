@@ -45,6 +45,10 @@ export class Vector{
         return new Vector(this.x, this.y);
     }
 
+    heading(){
+        return Math.atan2(this.y, this.x);
+    }
+
     dot(vec){
         return this.x * vec.x + this.y * vec.y;
     }

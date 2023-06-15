@@ -22,9 +22,13 @@ let ASPECT;
 let EDGE_OFFSET;
 let THICKNESS;
 let VERSION;
+let POSTPROC = 0;
 
 let DIM = 2000;
 let REN = window.innerHeight*2;
+if(search.has('size')){
+    REN = parseInt(search.get('size'));
+}
 
 function main(options) {
     
@@ -43,10 +47,10 @@ function main(options) {
 
     EDGE_OFFSET = 50;
     if(ASPECT >= 1)
-        EDGE_OFFSET = window.innerHeight*.15;
+        EDGE_OFFSET = window.innerHeight*.1;
     THICKNESS = 70 * SCALE;
     THICKNESS = rand(66, 77) * SCALE;
-    THICKNESS = rand(10, 70) * SCALE;
+    THICKNESS = rand(20, 40) * SCALE;
 
     if(!canvas)
         canvas = document.getElementById("canvas");
@@ -129,10 +133,16 @@ function render(){
     
     let randomtexture = getRandomTexture();
 
-    let seed1 = prng.rand();
-    let seed2 = prng.rand();
-    let seed3 = prng.rand();
-    gl.uniform3f(seedUniformLocation, seed1, seed2, seed3);
+    let seedr = prng.rand();
+    let seedg = prng.rand();
+    let seedb = prng.rand();
+    console.log('seeds')
+    console.log(seedr.toFixed(2), seedg.toFixed(2), seedb.toFixed(2));
+    seedr = 0.32;
+    seedg = 0.05;
+    seedb = 0.10;
+
+    gl.uniform3f(seedUniformLocation, seedr, seedg, seedb);
     gl.uniform1f(versionUniformLocation, VERSION);
 
     let positionBuffer = gl.createBuffer();
@@ -188,13 +198,17 @@ function render(){
     gl.clearColor(rand(.9, .93), rand(.9, .92), rand(.89, .91), 1);
     gl.clearColor(rand(.3, .9), rand(.3, .9), rand(.3, .9), 1);
     gl.clearColor(0.04, 0.05, 0.05, 1);
-    gl.clearColor(rand(.92, .93), rand(.92, .92), rand(.9, .91), 1);
+    gl.clearColor(rand(.87, .93), rand(.87, .93), rand(.87, .93), 1);
+    if(vversion == 3 || vversion == 4 || vversion == 5){
+        let aq = rand(.87, .93);
+        gl.clearColor(aq, aq, aq, 1);
+    }
     gl.clear(gl.COLOR_BUFFER_BIT);
     let numQuads = quads.length / 8;
     let numInfos = infos.length / 12;
     for(let i = 0; i < numQuads; i++) {
         const offset = i * 4; // 4 vertices per quad
-        gl.uniform3f(seedUniformLocation, seed1, seed2, seed3*(infos[offset*3]%2==1));
+        gl.uniform3f(seedUniformLocation, seedr, seedg, seedb*(infos[offset*3]%2==1));
         gl.uniform3f(infoUniformLocation, i, i, i);
         gl.drawArrays(gl.TRIANGLE_STRIP, offset, 4);
     }
@@ -225,8 +239,6 @@ function render(){
     let bgPositionAttributeLocation = gl.getAttribLocation(bgProgram, "a_position");
     let uTextureUniformLocation = gl.getUniformLocation(bgProgram, "u_texture");
 
-    // Pass the texture to the shader
-    
     gl.activeTexture(gl.TEXTURE0+0);
     // Now bind the texture and draw a screen-sized quad using your post-processing shader:
     gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -234,6 +246,7 @@ function render(){
     gl.uniform1i(uTextureUniformLocation, 0);
     gl.uniform2f(gl.getUniformLocation(bgProgram, "u_resolution"), REN, Math.round(REN/ASPECT));
     gl.uniform3f(gl.getUniformLocation(bgProgram, "u_seed"), prng.rand(), prng.rand(), prng.rand());
+    gl.uniform1f(gl.getUniformLocation(bgProgram, "u_postproc"), POSTPROC);
 
     let bgPositionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, bgPositionBuffer);
@@ -274,8 +287,8 @@ function constructQuads(){
         let bv = bounceVectors[0];
         bv.rotate(-Math.PI/2);
         bv.normalize();
-        leftAnchors.push(new Vector(points[0].x + bv.x * THICKNESS, points[0].y + bv.y * THICKNESS));
-        rightAnchors.push(new Vector(points[0].x - bv.x * THICKNESS, points[0].y - bv.y * THICKNESS));
+        leftAnchors.push(new Vector(points[0].x + bv.x * THICKNESS*.75, points[0].y + bv.y * THICKNESS*.75));
+        rightAnchors.push(new Vector(points[0].x - bv.x * THICKNESS*.75, points[0].y - bv.y * THICKNESS*.75));
         for(let j = 1; j < points.length-1; j++){
             let toprev = new Vector(points[j-1].x - points[j].x, points[j-1].y - points[j].y);
             toprev.normalize();
@@ -286,8 +299,8 @@ function constructQuads(){
                 let angle = Math.acos(ddot);
                 let fac = Math.sqrt(1 + Math.pow(Math.tan(angle), 2));
                 bv.rotate(-Math.PI/2);
-                leftAnchors.push(new Vector(points[j].x + bv.x * THICKNESS*fac, points[j].y + bv.y * THICKNESS*fac));
-                rightAnchors.push(new Vector(points[j].x - bv.x * THICKNESS*fac, points[j].y - bv.y * THICKNESS*fac));
+                leftAnchors.push(new Vector(points[j].x + bv.x * THICKNESS*.75*fac, points[j].y + bv.y * THICKNESS*.75*fac));
+                rightAnchors.push(new Vector(points[j].x - bv.x * THICKNESS*.75*fac, points[j].y - bv.y * THICKNESS*.75*fac));
             }
             else{
                 bv = bounceVectors[j].clone();
@@ -296,8 +309,8 @@ function constructQuads(){
                 let angle = Math.acos(ddot);
                 let fac = Math.sqrt(1 + Math.pow(Math.tan(angle), 2));
                 bv.rotate(+Math.PI/2);
-                leftAnchors.push(new Vector(points[j].x + bv.x * THICKNESS*fac, points[j].y + bv.y * THICKNESS*fac));
-                rightAnchors.push(new Vector(points[j].x - bv.x * THICKNESS*fac, points[j].y - bv.y * THICKNESS*fac));
+                leftAnchors.push(new Vector(points[j].x + bv.x * THICKNESS*.75*fac, points[j].y + bv.y * THICKNESS*.75*fac));
+                rightAnchors.push(new Vector(points[j].x - bv.x * THICKNESS*.75*fac, points[j].y - bv.y * THICKNESS*.75*fac));
             }
         }
         bv = bounceVectors[bounceVectors.length-1];
@@ -306,8 +319,8 @@ function constructQuads(){
         else
             bv.rotate(-Math.PI/2);
         bv.normalize();
-        leftAnchors.push(new Vector(points[points.length-1].x + bv.x * THICKNESS, points[points.length-1].y + bv.y * THICKNESS));
-        rightAnchors.push(new Vector(points[points.length-1].x - bv.x * THICKNESS, points[points.length-1].y - bv.y * THICKNESS));
+        leftAnchors.push(new Vector(points[points.length-1].x + bv.x * THICKNESS*.75, points[points.length-1].y + bv.y * THICKNESS*.75));
+        rightAnchors.push(new Vector(points[points.length-1].x - bv.x * THICKNESS*.75, points[points.length-1].y - bv.y * THICKNESS*.75));
     
         for(let j = 0; j < leftAnchors.length-1; j++){
             let p1 = leftAnchors[j];
@@ -453,15 +466,34 @@ function setupCurves(options){
         for(let i = 0; i < pathsteps; i++){
             let direction = direction0.clone();
             direction.rotate(map(power(rand(0, 1), 3), 0, 1, Math.PI/2, Math.PI*3/2));
+            let hhding = direction.heading();
+            hhding = Math.round(hhding/(Math.PI/8))*(Math.PI/8);
+            direction = new Vector(Math.cos(hhding), Math.sin(hhding));
             direction.normalize();
-            direction.multiplyScalar(SCALE*rand(400, 1400)*.25);
+            direction.multiplyScalar(SCALE*rand(100, 366));
+            // if(i%2 == 0){
+            //     direction.multiplyScalar(SCALE*rand(100, 110));
+            // }
+            // else{
+            //     direction.multiplyScalar(SCALE*rand(360, 370));
+            // }
+            direction.multiplyScalar(SCALE*rand(100, 366));
             let newPos = new Vector(pos.x + direction.x, pos.y + direction.y);
             let tries = 0;
             while(tries++ < 130 && (newPos.x < margin || newPos.x > aaa-margin || newPos.y < margin || newPos.y > bbb-margin || intersects(newPos, curve))){
                 direction = direction0.clone();
                 direction.rotate(map(power(rand(0, 1), 3), 0, 1, Math.PI/2, Math.PI*3/2));
+                let hhding = direction.heading();
+                hhding = Math.round(hhding/(Math.PI/8))*(Math.PI/8);
+                direction = new Vector(Math.cos(hhding), Math.sin(hhding));
                 direction.normalize();
-                direction.multiplyScalar(SCALE*rand(400, 1400)*.25);
+                direction.multiplyScalar(SCALE*rand(100, 366));
+                // if(i%2 == 0){
+                //     direction.multiplyScalar(SCALE*rand(100, 110));
+                // }
+                // else{
+                //     direction.multiplyScalar(SCALE*rand(360, 370));
+                // }
                 newPos = new Vector(pos.x + direction.x, pos.y + direction.y);
             }
             direction0 = direction.clone();
@@ -520,7 +552,13 @@ function setupCurves(options){
             // curve[i].add(new Vector(0, -bbb*random(-.1,.5)));
         }
     }
-    console.log(ctries)
+    // console.log(ctries)
+    const roundq = vectors => vectors.map(q => 
+        new Vector(Math.round(q.x/555)*555, Math.round(q.y/555)*555)
+    );
+
+    // curve = roundq(curve);
+
     curves.push(curve);
 }
 
@@ -606,7 +644,7 @@ document.addEventListener('keydown', function(event) {
     if(event.key == 's') {
         save();
     }
-    else if ('qa1234567'.indexOf(event.key) !== -1) {
+    else if ('qat123456'.indexOf(event.key) !== -1) {
         if(event.key == '1') {
             vversion = 0;
         }
@@ -625,14 +663,14 @@ document.addEventListener('keydown', function(event) {
         if(event.key == '6') {
             vversion = 5;
         }
-        if(event.key == '7') {
-            vversion = 6;
-        }
         if(event.key == 'a') {
             if(aaspect > 1)
                 aaspect = 3/4;
             else
                 aaspect = 4/3;
+        }
+        if(event.key == 't') {
+            POSTPROC = !POSTPROC;
         }
         if ('q1234567'.indexOf(event.key) !== -1){
             randomizeState();

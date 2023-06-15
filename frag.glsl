@@ -178,69 +178,68 @@ float rand(vec2 co){
     return r1;
 }
 
-void main() {
+vec3 rgb2xyz( vec3 c ) {
+    vec3 tmp;
+    tmp.x = ( c.r > 0.04045 ) ? pow( ( c.r + 0.055 ) / 1.055, 2.4 ) : c.r / 12.92;
+    tmp.y = ( c.g > 0.04045 ) ? pow( ( c.g + 0.055 ) / 1.055, 2.4 ) : c.g / 12.92,
+    tmp.z = ( c.b > 0.04045 ) ? pow( ( c.b + 0.055 ) / 1.055, 2.4 ) : c.b / 12.92;
+    return 100.0 * tmp *
+        mat3( 0.4124, 0.3576, 0.1805,
+              0.2126, 0.7152, 0.0722,
+              0.0193, 0.1192, 0.9505 );
+}
 
-    float rnd = rand(vec2(v_uv.x, v_uv.y));
+vec3 xyz2lab( vec3 c ) {
+    vec3 n = c / vec3( 95.047, 100, 108.883 );
+    vec3 v;
+    v.x = ( n.x > 0.008856 ) ? pow( n.x, 1.0 / 3.0 ) : ( 7.787 * n.x ) + ( 16.0 / 116.0 );
+    v.y = ( n.y > 0.008856 ) ? pow( n.y, 1.0 / 3.0 ) : ( 7.787 * n.y ) + ( 16.0 / 116.0 );
+    v.z = ( n.z > 0.008856 ) ? pow( n.z, 1.0 / 3.0 ) : ( 7.787 * n.z ) + ( 16.0 / 116.0 );
+    return vec3(( 116.0 * v.y ) - 16.0, 500.0 * ( v.x - v.y ), 200.0 * ( v.y - v.z ));
+}
 
-    float var = v_uv.x * .00051;
-    var = v_uv.x*.5;
+vec3 rgb2lab(vec3 c) {
+    vec3 lab = xyz2lab( rgb2xyz( c ) );
+    return vec3( lab.x / 100.0, 0.5 + 0.5 * ( lab.y / 127.0 ), 0.5 + 0.5 * ( lab.z / 127.0 ));
+}
 
-    float vix = rand(vec2(v_info.x, v_info.x)/3.)*0.;
-
-    float r = .52 + .48*sin(var*(.1 + 3.*mod(u_seed.x+vix, 1.)) + mod(u_seed.z+vix, 1.)*10. + vix*12.31);
-    float g = .52 + .48*sin(var*(.1 + 3.*mod(u_seed.y+vix, 1.)) + mod(u_seed.x+vix, 1.)*10. + vix*12.31);
-    float b = .52 + .48*sin(var*(.1 + 3.*mod(u_seed.z+vix, 1.)) + mod(u_seed.y+vix, 1.)*10. + vix*12.31);
-    
-    float xx;
-
-    float sm1 = .1;
-    float sm2 = .9;
-    float pw = 1.;
-    float shiftr = u_seed.x*12.;
-    float shiftg = u_seed.y*12.;
-    float shiftb = u_seed.z*12.;
-
-    xx = var*1.1;
-    r = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, shiftr+vix*20.))), pw);
-    g = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, shiftg+vix*20.))), pw);
-    b = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, shiftb+vix*20.))), pw);
-
-    vec3 c0 = vec3(r,g,b);
-
-    xx = var + hash12(v_uv.xx*4.4+hash12(v_uv.xx*4.4)) * 0.07;
-    r = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, u_seed.x*100.+vix*20.))), pw);
-    g = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, u_seed.y*100.+vix*20.))), pw);
-    b = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, u_seed.z*100.+vix*20.))), pw);
-
-    vec3 c1 = vec3(r, g, b);
-    
-    float strk = 277.22 + .0*power(clamp(simplex3d(vec3(v_uv.x*0.00004+11.44, v_uv.x*0.00004, u_seed.x+vix*20.+22.3)), 0., 1.), 5.);
-
-    xx = var + hash12(v_uv.xx) * 0.0;
-    xx += .019*(-.5 + hash12(vec2(floor(v_uv.x*strk)/1.)));
-    r = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, u_seed.x*100.+vix*20.))), pw);
-    g = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, u_seed.y*100.+vix*20.))), pw);
-    b = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, u_seed.z*100.+vix*20.))), pw);
-
-    vec3 c2 = vec3(r, g, b);
-
-    float nz = power(clamp(simplex3d(vec3(v_uv.x*0.94*2., v_uv.y*0.94, u_seed.x+vix*20.)), 0., 1.), 5.);
-    float nz2 = .15*power(clamp(simplex3d(vec3(v_uv.x*0.14*2.+29., v_uv.y*1.14, u_seed.x+vix*20.+131.31)), 0., 1.), 5.);
-    vec3 res = c0;
-    res = res + (c2-res)*nz2;
-    res = c0;
-
-    vec3 randomcolor = vec3(
-        .3 + .7*hash12(vec2(v_info.x*0.+u_seed.x)),
-        .3 + .7*hash12(vec2(v_info.x*0.+u_seed.x+23.21)),
-        .3 + .7*hash12(vec2(v_info.x*0.+u_seed.x+31.1))
+vec3 lab2xyz( vec3 c ) {
+    float fy = ( c.x + 16.0 ) / 116.0;
+    float fx = c.y / 500.0 + fy;
+    float fz = fy - c.z / 200.0;
+    return vec3(
+         95.047 * (( fx > 0.206897 ) ? fx * fx * fx : ( fx - 16.0 / 116.0 ) / 7.787),
+        100.000 * (( fy > 0.206897 ) ? fy * fy * fy : ( fy - 16.0 / 116.0 ) / 7.787),
+        108.883 * (( fz > 0.206897 ) ? fz * fz * fz : ( fz - 16.0 / 116.0 ) / 7.787)
     );
+}
 
-    res = res + (1.-res)*.0;
+vec3 xyz2rgb( vec3 c ) {
+    vec3 v =  c / 100.0 * mat3( 
+        3.2406, -1.5372, -0.4986,
+        -0.9689, 1.8758, 0.0415,
+        0.0557, -0.2040, 1.0570
+    );
+    vec3 r;
+    r.x = ( v.r > 0.0031308 ) ? (( 1.055 * pow( v.r, ( 1.0 / 2.4 ))) - 0.055 ) : 12.92 * v.r;
+    r.y = ( v.g > 0.0031308 ) ? (( 1.055 * pow( v.g, ( 1.0 / 2.4 ))) - 0.055 ) : 12.92 * v.g;
+    r.z = ( v.b > 0.0031308 ) ? (( 1.055 * pow( v.b, ( 1.0 / 2.4 ))) - 0.055 ) : 12.92 * v.b;
+    return r;
+}
 
-    float gr = pow(hash12(vec2(floor(v_uv.x*1.)/1.)), 9.);
-    gr = clamp(smoothstep(.3, .5, gr), 0., 1.)*.2;
-    // vec3 red = vec3(gr, 0., 0.);
+vec3 lab2rgb(vec3 c) {
+    return xyz2rgb( lab2xyz( vec3(100.0 * c.x, 2.0 * 127.0 * (c.y - 0.5), 2.0 * 127.0 * (c.z - 0.5)) ) );
+}
+
+vec3 goodmix(vec3 rgb1, vec3 rgb2, float p){
+    // vec3 lab1 = rgb2lab(rgb1);
+    // vec3 lab2 = rgb2lab(rgb2);
+    // vec3 lab = mix(lab1, lab2, p);
+    // vec3 rgb = lab2rgb(lab);
+    return mix(rgb1, rgb2, p);
+}
+
+void main() {
 
     vec3 red = vec3(.8, .2, 0.);
     vec3 orange = vec3(.8, .4, 0.);
@@ -251,50 +250,55 @@ void main() {
     vec3 white = vec3(.8, .8, .8);
     vec3 drakblue = vec3(.0, .0, .4);
 
-    // float redamp = power(clamp(simplex3d(vec3(xx, xx, u_seed.x*100.+vix*20. + 551.55)), 0., 1.), 3.);
-    // float orangeamp = power(clamp(simplex3d(vec3(xx, xx, u_seed.x*100.+vix*20. + 12.34)), 0., 1.), 3.);
-    // float yellowamp = power(clamp(simplex3d(vec3(xx, xx, u_seed.y*100.+vix*20. + 23.6)), 0., 1.), 3.);
-    // float greenamp = power(clamp(simplex3d(vec3(xx, xx, u_seed.z*100.+vix*20. + 445.43)), 0., 1.), 3.);
-    // float blueamp = power(clamp(simplex3d(vec3(xx, xx, u_seed.x*100.+vix*20. + 34.21)), 0., 1.), 3.);
-    // float purpleamp = power(clamp(simplex3d(vec3(xx, xx, u_seed.y*100.+vix*20. + 62.5)), 0., 1.), 3.);
-    // float whiteamp = power(clamp(simplex3d(vec3(xx, xx, u_seed.z*100.+vix*20. + 788.23)), 0., 1.), 3.);
-    // float drakblueamp = power(clamp(simplex3d(vec3(xx, xx, u_seed.x*100.+vix*20. + 55.12)), 0., 1.), 3.);
+    float alpha = 1.;
+    float rnd = rand(vec2(v_uv.x, v_uv.y));
 
-    // vec3 res2 = red*redamp + orange*orangeamp + drakblue*drakblueamp + yellow*yellowamp + green*greenamp + blue*blueamp + purple*purpleamp + white*whiteamp;
+    float var = v_uv.x * .00051;
+    var = v_uv.x*.5;
 
-    // res2 = clamp(res2/3.5, 0., 1.);
+    float vix = rand(vec2(v_info.x, v_info.x)/3.)*0.;
 
-    float alpha = fract(u_info.x/3.);
-    alpha = 1.;
+    float sm1 = .1;
+    float sm2 = .9;
+    float pw = 1.;
+    float shiftr = u_seed.x*12.;
+    float shiftg = u_seed.y*12.;
+    float shiftb = u_seed.z*12.;
 
-    gl_FragColor = vec4(0.0,0.0,0.0, 1.0);  // RGBA, purple color
-    // res *= .3 + (1.-.3)*(1.-pow(v_uv.x, 3.));
+    float xx = var*.71;
+    float r = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, shiftr))), pw);
+    float g = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, shiftg))), pw);
+    float b = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, shiftb))), pw);
+
+    vec3 c0 = vec3(r,g,b);
+    // c0 = goodmix(purple, yellow, r);
+    // c0 = goodmix(c0, orange, g*.5);
+    // c0 = goodmix(c0, blue, b*.25);
+    float nz = power(clamp(simplex3d(vec3(v_uv.x*0.94*2., v_uv.y*0.94, u_seed.x+vix*20.)), 0., 1.), 5.);
+    vec3 res = c0;
+
+    res = res + (1.-res)*.0;
+
     gl_FragColor = vec4(res, alpha);  // RGBA, purple color
-    if(u_seed.z < 0.001 && abs(u_version-1.0) < 0.001){
-        float hhhs = hash12(vec2(v_uv.x*.01, v_uv.y*.01));
-        gl_FragColor = vec4(hhhs*.9+.1, hhhs*.9+.1, hhhs*.9+.1, alpha);  // RGBA, purple color
-    }
-    if(u_seed.z < 0.001 && abs(u_version-2.0) < 0.001 || abs(u_version-4.0) < 0.001){
+    // if(u_seed.z < 0.001 && abs(u_version-1.0) < 0.001){
+    //     float hhhs = hash12(vec2(v_uv.x*.01, v_uv.y*.01));
+    //     gl_FragColor = vec4(hhhs*.9+.1, hhhs*.9+.1, hhhs*.9+.1, alpha);  // RGBA, purple color
+    // }
+    if(u_seed.z < 0.001 && abs(u_version-1.0) < 0.001 || abs(u_version-3.0) < 0.001){
         float ooo = power(clamp(simplex3d(vec3(v_uv.x, v_uv.y, u_seed.x*100.+vix*20. + 551.55)), 0., 1.), 3.);
         ooo = fbm3(v_uv.xy*3., v_info.x*0.1);
-        // ooo = floor(ooo*(111.+177.*oo));
         ooo = smoothstep(.25, .75, ooo);
-        // ooo = smoothstep(.475, .525, ooo);
-
         float uvx = v_uv.x + .07*fbm3(v_uv.xy*3., v_info.x*0.1);
         float uvx2 = v_uv.x + .07*fbm3(v_uv.xy*3.-vec2(0., 0.06), v_info.x*0.1);
         float oo = hash12(vec2(v_info.x*110.4, v_info.y*110.4));
         float ix = (uvx*(77.+77.*oo));
         float ix2 = (uvx2*(77.+77.*oo));
-        float rr1 = (.1 + .1*ooo)+.8*smoothstep(.8, 1.2, mod(ix, 2.));
-        float rr2 = (.1 + .1*ooo)+.8*smoothstep(.8, 1.2, mod(ix2, 2.));
-        // float thinfilm = abs(mod(ix, 2.)-mod(ix2, 2.));
-        // rr1 = clamp(rr1 + thinfilm, 0., 1.);
-        // gl_FragColor = vec4(vec3(ooo, ooo, ooo), 1.0);  // RGBA, purple color
+        float rr1 = (.1 + .1*ooo)+.8*smoothstep(.96, 1.04, mod(ix, 2.));
+        float rr2 = (.1 + .1*ooo)+.8*smoothstep(.96, 1.04, mod(ix2, 2.));
         rr1 *= .9 + (1.-.9)*(1.-v_uv.x);
         gl_FragColor = vec4(vec3(rr1, rr1, rr1), alpha);  // RGBA, purple color
     }
-    if(u_seed.z < 0.001 && abs(u_version-3.0) < 0.001 || abs(u_version-5.0) < 0.001){
+    if(u_seed.z < 0.001 && abs(u_version-2.0) < 0.001 || abs(u_version-4.0) < 0.001){
         float rnd = rand(vec2(v_uv.x, v_uv.y));
         float var = v_uv.x;
         float oo = hash12(vec2(v_info.x*0.4, v_info.y*0.4)) * 0. + 1.;
@@ -304,15 +308,11 @@ void main() {
         rr *= .9 + (1.-.9)*(1.-v_uv.x);
         gl_FragColor = vec4(vec3(rr, rr, rr), alpha);  // RGBA, purple color
     }
-    if(abs(u_version-6.0) < 0.001){
+    if(abs(u_version-5.0) < 0.001){
         vec2 varr = v_uv.xy*1.5;
-
         float ooo = power(clamp(simplex3d(vec3(varr.x, varr.y, u_seed.x*100.+vix*20. + 551.55)), 0., 1.), 3.);
         ooo = fbm3(varr.xy*3., v_info.x*0.1);
-        // ooo = floor(ooo*(111.+177.*oo));
         ooo = smoothstep(.25, .75, ooo);
-        // ooo = smoothstep(.475, .525, ooo);
-
         float uvx = varr.y + .07*fbm3(varr.xy*3., v_info.x*0.1);
         float uvx2 = varr.y + .07*fbm3(varr.xy*3.-vec2(0., 0.06), v_info.x*0.1);
         float oo = hash12(vec2(v_info.x*110.4, v_info.y*110.4));
@@ -321,27 +321,12 @@ void main() {
         float rr1 = (.1 + .1*ooo)+.8*smoothstep(.8, 1.2, mod(ix, 2.));
         float rr2 = (.1 + .1*ooo)+.8*smoothstep(.8, 1.2, mod(ix2, 2.));
         rr2 = 0.0;
-        // if(floor(ix/2.) < -5. && u_seed.z > 0.001 || floor(ix/2.) > -1. && u_seed.z > 0.001){
-        //     alpha = 0.;
-        // }
         if((ix < 12.-floor(12.*u_seed.y) || ix > 15.) && u_seed.z < 0.001){
             alpha = 0.;
         }
         rr1 *= .9 + (1.-.9)*(1.-varr.x);
         gl_FragColor = vec4(vec3(rr1, rr1, rr1), alpha);  // RGBA, purple color
-        // if((ix > -7. || ix < -18.) && u_seed.z >= 0.001){
-        //     alpha = 0.;
-        // }
-        // float thinfilm = abs(mod(ix, 2.)-mod(ix2, 2.));
-        // rr1 = clamp(rr1 + thinfilm, 0., 1.);
-        // gl_FragColor = vec4(vec3(ooo, ooo, ooo), 1.0);  // RGBA, purple color
     }
-    // gl_FragColor = vec4(randomcolor, 1.0);  // RGBA, purple color
-     //gl_FragColor = vec4(vec3(nz2), 1.0);  // RGBA, purple color
-    // gl_FragColor = vec4(v_uv.x, v_uv.y, 0., 1.0);  // RGBA, purple color
-    // float randValue = clamp(hcrandom(v_uv.xyx).r, 0., 1.);
-    // gl_FragColor = vec4(vec3(randValue), 1.0);  // RGBA, purple color
-    // gl_FragColor = vec4(vec3(v_uv.x, v_uv.y, 0.), alpha);  // RGBA, purple color
 }
 
 void main2() {

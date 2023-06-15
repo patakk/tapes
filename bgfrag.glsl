@@ -3,6 +3,7 @@ precision mediump float;
 uniform sampler2D u_texture;
 uniform vec2 u_resolution;
 uniform vec3 u_seed;
+uniform float u_postproc;
 
 varying vec2 v_uv;
 
@@ -197,15 +198,17 @@ void main() {
     vec3 blurred2 = blur2(v_uv, u_resolution, 1., .1);
 
     vec3 result = blurred1;
-    result = result + (vec3(1.) - result)*.0;
+    // result = result + (vec3(1.) - result)*.0;
 
     vec2 abspos = v_uv * u_resolution;
-    float marg = u_resolution.x * .01;
+    float marg = min(u_resolution.x, u_resolution.y) * .01;
     if(abspos.x < marg || abspos.x > u_resolution.x - marg || abspos.y < marg || abspos.y > u_resolution.y - marg){
         result = vec3(.15);
     }
 
-    result = result + .126*(-.5 + salt);
+    if(u_postproc > 0.9){
+        result = result + .076*(-.5 + salt);
+    }
     result = clamp(result, 0., 1.);
 
     gl_FragColor = vec4(vec3(nnz), 1.);
