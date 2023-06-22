@@ -1,6 +1,7 @@
 
 import {getShaderSource, createShader, createProgram} from "./webglutils.js";
 import { Vector, Quad } from "./utils.js";
+import { makeBlueNoiseImage } from "./poisson.js";
 
 let canvas;
 let gl;
@@ -22,13 +23,19 @@ let ASPECT;
 let EDGE_OFFSET;
 let THICKNESS;
 let VERSION;
-let POSTPROC = 0;
+let POSTPROC = 1;
 
 let DIM = 2000;
 let REN = window.innerHeight*2;
 if(search.has('size')){
     REN = parseInt(search.get('size'));
 }
+let DEBUG = false;
+if(search.has('debug')){
+    if(search.get('debug') == 'true')
+        DEBUG = true;
+}
+
 
 function main(options) {
     
@@ -51,6 +58,7 @@ function main(options) {
     THICKNESS = 70 * SCALE;
     THICKNESS = rand(66, 77) * SCALE;
     THICKNESS = rand(20, 40) * SCALE;
+    THICKNESS = rand(40, 50) * SCALE;
 
     if(!canvas)
         canvas = document.getElementById("canvas");
@@ -64,9 +72,41 @@ function main(options) {
     gl.viewport(0, 0, REN, Math.round(REN/ASPECT));
 
     setupCurves(options);
+    if(DEBUG) previewCurves()
     constructQuads();
 
     render();
+}
+
+function previewCurves(){
+    let debugcanvas = document.getElementById("debugcanvas");
+    debugcanvas.width = REN;
+    debugcanvas.height = Math.round(REN/ASPECT);
+    
+    debugcanvas.style.width = 500 + "px";
+    debugcanvas.style.height = Math.round(500/ASPECT) + "px";;
+    let ctx = debugcanvas.getContext('2d');
+    ctx.clearRect(0, 0, debugcanvas.width, debugcanvas.height);
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(0, 0, debugcanvas.width, debugcanvas.height);
+    ctx.lineWidth = 44;
+    ctx.fillStyle = "#ffffff";
+    for(let i = 0; i < curves.length; i++){
+        let points = curves[i];
+        for(let j = 0; j < points.length-1; j++){
+            let pt1 = points[j];
+            let pt2 = points[j+1];
+            let parts = 20;
+            for(let k = 0; k < parts; k++){
+                let t = k/parts;
+                let x = t*pt1.x + (1-t)*pt2.x;
+                let y = t*pt1.y + (1-t)*pt2.y;
+                y = debugcanvas.height - y*1;
+                ctx.fillRect(x*1-33/2, y-33/2, 33, 33);
+            }
+        }
+    }
+    
 }
 
 function getRandomTexture(){
@@ -80,6 +120,7 @@ function getRandomTexture(){
     // Fill the array with random values.
     for (var i = 0; i < data.length; i++) {
         // Multiply by 256 to get a value in the range [0, 256), then use Math.floor to round down to an integer.
+        // data[i] = Math.floor(prng.rand() * 256);
         data[i] = Math.floor(prng.rand() * 256);
     }
 
@@ -97,6 +138,33 @@ function getRandomTexture(){
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
     return texture;
 }
+
+function getBlueNoiseTexture() {
+    // Generate the blue noise image
+    const blueNoiseImage = makeBlueNoiseImage(256, 256, 1.5);
+    const ctx = blueNoiseImage.getContext('2d');
+
+    // Get the image data from the canvas
+    const imageData = ctx.getImageData(0, 0, blueNoiseImage.width, blueNoiseImage.height);
+    const data = new Uint8Array(imageData.data.buffer);
+
+    // Create a new texture
+    const blueNoiseTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, blueNoiseTexture);
+
+    // Set the parameters so we can render any size image
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+    // Upload the image data into the texture
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, blueNoiseImage.width, blueNoiseImage.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+
+    return blueNoiseTexture;
+}
+
+let blueNoiseTexture;
 
 function render(){
     let fragmentCode = getShaderSource("frag.glsl");
@@ -123,8 +191,6 @@ function render(){
     let seedUniformLocation = gl.getUniformLocation(program, "u_seed");
     let versionUniformLocation = gl.getUniformLocation(program, "u_version");
     let infoUniformLocation = gl.getUniformLocation(program, "u_info");
-    var randomTextureLocation = gl.getUniformLocation(program, "u_randomTexture");
-    var randomTextureSizeLocation = gl.getUniformLocation(program, "u_randomTextureSize");
 
     // let colorUniformLocation = gl.getUniformLocation(program, "u_color");
 
@@ -132,15 +198,17 @@ function render(){
     gl.uniform2f(simulationUniformLocation, DIM, Math.round(DIM/ASPECT));
     
     let randomtexture = getRandomTexture();
+    // if(!blueNoiseTexture)
+    //     blueNoiseTexture = getBlueNoiseTexture();
 
     let seedr = prng.rand();
     let seedg = prng.rand();
     let seedb = prng.rand();
+    // seedr = 0.926479;
+    // seedg = 0.480011;
+    // seedb = 0.005631;
     console.log('seeds')
-    console.log(seedr.toFixed(2), seedg.toFixed(2), seedb.toFixed(2));
-    seedr = 0.32;
-    seedg = 0.05;
-    seedb = 0.10;
+    console.log('seedr = ' + seedr.toFixed(6) + ';\nseedg = ' + seedg.toFixed(6) +  ';\nseedb = ' + seedb.toFixed(6) + ";");
 
     gl.uniform3f(seedUniformLocation, seedr, seedg, seedb);
     gl.uniform1f(versionUniformLocation, VERSION);
@@ -191,25 +259,43 @@ function render(){
 
     gl.activeTexture(gl.TEXTURE0 + 0);
     gl.bindTexture(gl.TEXTURE_2D, randomtexture);
-    gl.uniform1i(randomTextureLocation, 0);
-    gl.uniform2f(randomTextureSizeLocation, 256, 256);
+    gl.uniform1i(gl.getUniformLocation(program, "u_randomTexture"), 0);
+    gl.uniform2f(gl.getUniformLocation(program, "u_randomTextureSize"), 256, 256);
+    gl.uniform1f(gl.getUniformLocation(program, "u_postproc"), POSTPROC);
 
     gl.clearColor(0.898, 0.827, 0.675, 1);
     gl.clearColor(rand(.9, .93), rand(.9, .92), rand(.89, .91), 1);
     gl.clearColor(rand(.3, .9), rand(.3, .9), rand(.3, .9), 1);
     gl.clearColor(0.04, 0.05, 0.05, 1);
     gl.clearColor(rand(.87, .93), rand(.87, .93), rand(.87, .93), 1);
+    let ooffb = rand(-.01, .01)
+    let br = rand(.9, .93) + ooffb;
+    let bg = rand(.9, .92) + ooffb;
+    let bb = rand(.89, .91) + ooffb;
+    while(bg > br){
+        br = rand(.9, .93) + ooffb;
+        bg = rand(.9, .92) + ooffb;
+        bb = rand(.89, .91) + ooffb;
+    }
+    gl.clearColor(br, bg, bb, 1);
     if(vversion == 3 || vversion == 4 || vversion == 5){
         let aq = rand(.87, .93);
         gl.clearColor(aq, aq, aq, 1);
     }
+    gl.clearColor(0.9254902, 0.92156863, 0.90588235, 1.);
     gl.clear(gl.COLOR_BUFFER_BIT);
     let numQuads = quads.length / 8;
     let numInfos = infos.length / 12;
+    let curve = curves[0];
     for(let i = 0; i < numQuads; i++) {
         const offset = i * 4; // 4 vertices per quad
+
+        let angle = Math.atan2(curve[i].y - curve[i+1].y, curve[i].x - curve[i+1].x);
+        console.log(angle)
+
         gl.uniform3f(seedUniformLocation, seedr, seedg, seedb*(infos[offset*3]%2==1));
         gl.uniform3f(infoUniformLocation, i, i, i);
+        gl.uniform2f(gl.getUniformLocation(program, "u_angle"), angle, angle);
         gl.drawArrays(gl.TRIANGLE_STRIP, offset, 4);
     }
 
@@ -247,6 +333,12 @@ function render(){
     gl.uniform2f(gl.getUniformLocation(bgProgram, "u_resolution"), REN, Math.round(REN/ASPECT));
     gl.uniform3f(gl.getUniformLocation(bgProgram, "u_seed"), prng.rand(), prng.rand(), prng.rand());
     gl.uniform1f(gl.getUniformLocation(bgProgram, "u_postproc"), POSTPROC);
+
+    
+    // gl.activeTexture(gl.TEXTURE0 + 1);
+    // gl.bindTexture(gl.TEXTURE_2D, blueNoiseTexture);
+    // gl.uniform1i(gl.getUniformLocation(bgProgram, "u_bluenoiseTexture"), 1);
+    // gl.uniform2f(gl.getUniformLocation(bgProgram, "u_bluenoiseTextureSize"), 256, 256);
 
     let bgPositionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, bgPositionBuffer);
@@ -296,6 +388,7 @@ function constructQuads(){
                 bv = bounceVectors[j].clone();
                 bv.normalize();
                 let ddot = toprev.dot(bv);
+                ddot = Math.min(Math.max(ddot, -1), 1);
                 let angle = Math.acos(ddot);
                 let fac = Math.sqrt(1 + Math.pow(Math.tan(angle), 2));
                 bv.rotate(-Math.PI/2);
@@ -306,6 +399,7 @@ function constructQuads(){
                 bv = bounceVectors[j].clone();
                 bv.normalize();
                 let ddot = toprev.dot(bv);
+                ddot = Math.min(Math.max(ddot, -1), 1);
                 let angle = Math.acos(ddot);
                 let fac = Math.sqrt(1 + Math.pow(Math.tan(angle), 2));
                 bv.rotate(+Math.PI/2);
@@ -453,6 +547,7 @@ function setupCurves(options){
     let aaa = DIM;
     let bbb = Math.floor(DIM/ASPECT);
     let margin = aaa*.12;
+    let numangles = 14;
 
     while(!success && ctries++ < 100){
         let pos = new Vector(aaa/2 + rand(-222, 222), bbb/2 + rand(-222, 222));
@@ -463,11 +558,12 @@ function setupCurves(options){
         let center = new Vector(aaa*.5, bbb*.5);
 
         curve.push(pos);
+        let prevangle = 100000;
         for(let i = 0; i < pathsteps; i++){
             let direction = direction0.clone();
             direction.rotate(map(power(rand(0, 1), 3), 0, 1, Math.PI/2, Math.PI*3/2));
             let hhding = direction.heading();
-            hhding = Math.round(hhding/(Math.PI/8))*(Math.PI/8);
+            hhding = Math.round(hhding/(Math.PI/numangles))*(Math.PI/numangles);
             direction = new Vector(Math.cos(hhding), Math.sin(hhding));
             direction.normalize();
             direction.multiplyScalar(SCALE*rand(100, 366));
@@ -483,8 +579,8 @@ function setupCurves(options){
             while(tries++ < 130 && (newPos.x < margin || newPos.x > aaa-margin || newPos.y < margin || newPos.y > bbb-margin || intersects(newPos, curve))){
                 direction = direction0.clone();
                 direction.rotate(map(power(rand(0, 1), 3), 0, 1, Math.PI/2, Math.PI*3/2));
-                let hhding = direction.heading();
-                hhding = Math.round(hhding/(Math.PI/8))*(Math.PI/8);
+                hhding = direction.heading();
+                hhding = Math.round(hhding/(Math.PI/numangles))*(Math.PI/numangles);
                 direction = new Vector(Math.cos(hhding), Math.sin(hhding));
                 direction.normalize();
                 direction.multiplyScalar(SCALE*rand(100, 366));
@@ -496,6 +592,7 @@ function setupCurves(options){
                 // }
                 newPos = new Vector(pos.x + direction.x, pos.y + direction.y);
             }
+            prevangle = hhding;
             direction0 = direction.clone();
             pos = newPos;
             curve.push(newPos);
@@ -531,9 +628,10 @@ function setupCurves(options){
         for(let i = 0; i < curve.length; i++){
             curve[i].sub(middle);
         }
-        if(sc > 1){
+        if(sc > 1 || true){
             for(let i = 0; i < curve.length; i++){
-                curve[i].multiplyScalar(1/sc);
+                curve[i].x /= scx;
+                curve[i].y /= scy;
             }
         }
         for(let i = 0; i < curve.length; i++){
@@ -578,37 +676,6 @@ function hsvToRgb(h, s, v) {
         case 5: r = v, g = p, b = q; break;
     }
     return [Math.floor(r*255), Math.floor(g*255), Math.floor(b*255)];
-}
-
-function handleWindowSize(){
-    let clientWidth = window.innerWidth;
-    let clientHeight = window.innerHeight;
-    let caspect = (clientWidth-EDGE_OFFSET*2)/(clientHeight-EDGE_OFFSET*2);
-    let aspect = ASPECT;
-    let sw, sh;
-    if(caspect > aspect){
-        sh = Math.round(clientHeight) - EDGE_OFFSET*2;
-        sw = Math.round(sh * aspect);
-    }else{
-        sw = Math.round(clientWidth) - EDGE_OFFSET*2;
-        sh = Math.round(sw / aspect);
-    }
-    canvas.width = sw;
-    canvas.height = sh;
-    canvas.style.width = sw + 'px';
-    canvas.style.height = sh + 'px';
-    canvas.style.position = 'absolute';
-    canvas.style.left = clientWidth/2 - sw/2 + 'px';
-    canvas.style.top = clientHeight/2 - sh/2 + 'px';
-}
-
-function onresize(event){
-    // // set width and height, full screen
-    // canvas.width = window.innerWidth*SCALE;
-    // canvas.height = window.innerHeight*SCALE;
-    // canvas.style.width = window.innerWidth + "px";
-    // canvas.style.height = window.innerHeight + "px";
-    handleWindowSize();
 }
 
 function power(p, g) {
@@ -680,6 +747,94 @@ document.addEventListener('keydown', function(event) {
         main({'aspect': aaspect, 'version': vversion});
     }
 });
+
+
+function handleWindowSize(){
+    let clientWidth = window.innerWidth;
+    let clientHeight = window.innerHeight;
+    let caspect = (clientWidth-EDGE_OFFSET*2)/(clientHeight-EDGE_OFFSET*2);
+    let aspect = ASPECT;
+    let sw, sh;
+    if(caspect > aspect){
+        sh = Math.round(clientHeight) - EDGE_OFFSET*2;
+        sw = Math.round(sh * aspect);
+    }else{
+        sw = Math.round(clientWidth) - EDGE_OFFSET*2;
+        sh = Math.round(sw / aspect);
+    }
+    // canvas.width = sw;
+    // canvas.height = sh;
+    canvas.style.width = sw + 'px';
+    canvas.style.height = sh + 'px';
+    canvas.style.position = 'absolute';
+    canvas.style.left = clientWidth/2 - sw/2 + 'px';
+    canvas.style.top = clientHeight/2 - sh/2 + 'px';
+}
+
+function onresize(event){
+    // // set width and height, full screen
+    // canvas.width = window.innerWidth*SCALE;
+    // canvas.height = window.innerHeight*SCALE;
+    // canvas.style.width = window.innerWidth + "px";
+    // canvas.style.height = window.innerHeight + "px";
+    handleWindowSize();
+}
+
+
+// handle mouse clicke
+let ismousedown = false;
+document.addEventListener('mousedown', function(event) {
+    // console.log(event);
+    ismousedown = true;
+    if(DEBUG)
+        handleZoom(event);
+});
+
+// mosue drag
+document.addEventListener('mousemove', function(event) {
+    // console.log(event);
+    if(ismousedown){
+        if(DEBUG)
+            handleZoom(event);
+    }
+});
+
+document.addEventListener('mouseup', function(event) {
+    // console.log(event);
+    ismousedown = false;
+    handleWindowSize();
+});
+
+
+function handleZoom(event){
+    let clientWidth = window.innerWidth;
+    let clientHeight = window.innerHeight;
+    let caspect = (clientWidth-EDGE_OFFSET*2)/(clientHeight-EDGE_OFFSET*2);
+    let aspect = ASPECT;
+    let sw, sh;
+    if(caspect > aspect){
+        sh = Math.round(clientHeight) - EDGE_OFFSET*2;
+        sw = Math.round(sh * aspect);
+    }else{
+        sw = Math.round(clientWidth) - EDGE_OFFSET*2;
+        sh = Math.round(sw / aspect);
+    }
+    // canvas.width = sw;
+    // canvas.height = sh;
+    let mousex = event.clientX;
+    let mousey = event.clientY;
+    // map mouse to canvas
+    let cw = canvas.width*.77;
+    let ch = canvas.height*.77;
+    let px = map(mousex, 0, clientWidth, 0, 1);
+    let py = map(mousey, 0, clientHeight, 0, 1);
+    canvas.style.width = cw + 'px';
+    canvas.style.height = ch + 'px';
+    canvas.style.position = 'absolute';
+    canvas.style.left = mousex - cw/2 - cw*(-.5 + px)*1.5 + 'px';
+    canvas.style.top = mousey - ch/2 - ch*(-.5 + py)*1.5 + 'px';
+}
+
 
 
 function save(){

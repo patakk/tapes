@@ -5,6 +5,10 @@ uniform vec2 u_resolution;
 uniform vec3 u_seed;
 uniform float u_postproc;
 
+
+uniform sampler2D u_bluenoiseTexture;
+uniform vec2 u_bluenoiseTextureSize;
+
 varying vec2 v_uv;
 
 
@@ -180,6 +184,14 @@ vec3 blur2(vec2 uv, vec2 resolution, float radius, float intensity) {
     return color/121.;
 }
 
+vec3 hardMixBlend(vec3 col1, vec3 col2) {
+    vec3 result;
+    result.r = (col1.r < (1.0 - col2.r)) ? 0.0 : 1.0;
+    result.g = (col1.g < (1.0 - col2.g)) ? 0.0 : 1.0;
+    result.b = (col1.b < (1.0 - col2.b)) ? 0.0 : 1.0;
+    return result;
+}
+
 void main() {
     vec3 color = texture2D(u_texture, v_uv).rgb;
 
@@ -202,15 +214,28 @@ void main() {
 
     vec2 abspos = v_uv * u_resolution;
     float marg = min(u_resolution.x, u_resolution.y) * .01;
+
+    if(u_postproc > 0.9){
+        result = result + .096*(-.5 + salt);
+        // vec3 bluenosie = texture2D(u_bluenoiseTexture, mod(gl_FragCoord.xy/u_bluenoiseTextureSize + u_seed.rg*12.31, 1.)*.495).rgb;
+        // vec3 blueblured = blur3(v_uv, u_resolution, 1., .1);
+        // bluenosie = smoothstep(.7, .7+.1, bluenosie);
+        // vec3 result2 = result*.5 + (-.5+1.)*hardMixBlend(result, vec3(hash12(mod(gl_FragCoord.xy*.5 + u_seed.rg*132.31, 111.))));
+        vec3 result2 = result*.25 + (-.25+1.)*hardMixBlend(result, vec3(hash12(mod(gl_FragCoord.xy + u_seed.rg*132.31, 111.))));
+        result = 0.92*result + (-.92+1.)*(1. - (1.-result)*(1.-result2));
+        // result = result2;
+    }
     if(abspos.x < marg || abspos.x > u_resolution.x - marg || abspos.y < marg || abspos.y > u_resolution.y - marg){
         result = vec3(.15);
     }
-
-    if(u_postproc > 0.9){
-        result = result + .076*(-.5 + salt);
-    }
     result = clamp(result, 0., 1.);
 
-    gl_FragColor = vec4(vec3(nnz), 1.);
     gl_FragColor = vec4(result.rgb, 1.);
+    // gl_FragColor = vec4(vec3(hash12(mod(gl_FragCoord.xy*.5 + u_seed.rg*132.31, 111.))), 1.);
+
+    // // // gl frag pos
+
+    // gl_FragColor = vec4(vec3(bluenosie), 1.);
+    // gl_FragColor = vec4(result.rgb, 1.);
+    
 }

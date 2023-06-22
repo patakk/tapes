@@ -4,9 +4,11 @@ uniform vec3 u_seed;
 uniform float u_version;
 uniform vec3 u_info;
 uniform vec2 u_resolution;
+uniform vec2 u_angle;
 
 varying vec2 v_uv;
 varying vec3 v_info;
+uniform float u_postproc;
 
 uniform sampler2D u_randomTexture;
 uniform vec2 u_randomTextureSize;
@@ -239,6 +241,15 @@ vec3 goodmix(vec3 rgb1, vec3 rgb2, float p){
     return mix(rgb1, rgb2, p);
 }
 
+
+vec3 hardMixBlend(vec3 col1, vec3 col2) {
+    vec3 result;
+    result.r = (col1.r < (1.0 - col2.r)) ? 0.0 : 1.0;
+    result.g = (col1.g < (1.0 - col2.g)) ? 0.0 : 1.0;
+    result.b = (col1.b < (1.0 - col2.b)) ? 0.0 : 1.0;
+    return result;
+}
+
 void main() {
 
     vec3 red = vec3(.8, .2, 0.);
@@ -255,6 +266,9 @@ void main() {
 
     float var = v_uv.x * .00051;
     var = v_uv.x*.5;
+    // if(u_seed.z < 0.5){
+    //     var = v_uv.y*1.5;
+    // }
 
     float vix = rand(vec2(v_info.x, v_info.x)/3.)*0.;
 
@@ -264,13 +278,42 @@ void main() {
     float shiftr = u_seed.x*12.;
     float shiftg = u_seed.y*12.;
     float shiftb = u_seed.z*12.;
+    
+    float freq = .25 + 1.*hash12(vec2(u_seed.r*1.234, u_seed.g*3.231+u_seed.b*3.1));
+    freq *= 1. + 1.3*pow(clamp(v_uv.x, 0., 1.), 4.);
 
-    float xx = var*.71;
+    float xx = var*.71*freq;
     float r = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, shiftr))), pw);
     float g = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, shiftg))), pw);
     float b = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, shiftb))), pw);
+    if(hash12(vec2(u_seed.r, u_seed.g+u_seed.b)) < .5){
+        r = 0.5 + sin(xx*14. + shiftr*1112.13)*0.5;
+        g = 0.5 + sin(xx*14. + shiftg*1112.13)*0.5;
+        b = 0.5 + sin(xx*14. + shiftb*1112.13)*0.5;
+    }
+    
+    vec2 glfrg = vec2(gl_FragCoord.x, gl_FragCoord.y);
+    float angle = u_angle.x;
+    float s = sin(angle);
+    float c = cos(angle);
+    mat2 rot = mat2(c, -s, s, c);
+    glfrg = rot * glfrg;
+    float streak = hash12(vec2(mod(floor(glfrg.x), 334.12314)));
+    // streak = .5 + .5*sin(glfrg.x*0.1);
+    // streak = simplex3d(vec3(floor(v_uv.x*655.1)/1., v_uv.x*0.0, u_seed.x*0.+vix*0.));
+    // streak = 0.5 + 0.5*sin(v_uv.x*1555.  +streak*.1);
 
     vec3 c0 = vec3(r,g,b);
+    vec3 streaks = vec3(streak);
+
+    // c0 = c0*.94 + (-.94+1.)*hardMixBlend(c0, streaks);
+    
+    if(u_postproc > 0.9){
+        c0 = c0 + .014*streaks;
+    }
+    // c0 = 1. - (1.-c0)*(1.-streaks*.1);
+    // c0 = streaks;
+
     // c0 = goodmix(purple, yellow, r);
     // c0 = goodmix(c0, orange, g*.5);
     // c0 = goodmix(c0, blue, b*.25);
@@ -284,7 +327,7 @@ void main() {
     //     float hhhs = hash12(vec2(v_uv.x*.01, v_uv.y*.01));
     //     gl_FragColor = vec4(hhhs*.9+.1, hhhs*.9+.1, hhhs*.9+.1, alpha);  // RGBA, purple color
     // }
-    if(u_seed.z < 0.001 && abs(u_version-1.0) < 0.001 || abs(u_version-3.0) < 0.001){
+    if(u_seed.z < 0.001 && abs(u_version-1.0) < 0.001 || abs(u_version-3.0) < 0.001){  // zebra
         float ooo = power(clamp(simplex3d(vec3(v_uv.x, v_uv.y, u_seed.x*100.+vix*20. + 551.55)), 0., 1.), 3.);
         ooo = fbm3(v_uv.xy*3., v_info.x*0.1);
         ooo = smoothstep(.25, .75, ooo);
@@ -295,7 +338,7 @@ void main() {
         float ix2 = (uvx2*(77.+77.*oo));
         float rr1 = (.1 + .1*ooo)+.8*smoothstep(.96, 1.04, mod(ix, 2.));
         float rr2 = (.1 + .1*ooo)+.8*smoothstep(.96, 1.04, mod(ix2, 2.));
-        rr1 *= .9 + (1.-.9)*(1.-v_uv.x);
+        rr1 *= .95 + (1.-.95)*(1.-v_uv.x);
         gl_FragColor = vec4(vec3(rr1, rr1, rr1), alpha);  // RGBA, purple color
     }
     if(u_seed.z < 0.001 && abs(u_version-2.0) < 0.001 || abs(u_version-4.0) < 0.001){
@@ -327,6 +370,11 @@ void main() {
         rr1 *= .9 + (1.-.9)*(1.-varr.x);
         gl_FragColor = vec4(vec3(rr1, rr1, rr1), alpha);  // RGBA, purple color
     }
+    // gl_FragColor = vec4(vec3(v_uv.x, v_uv.y, 0.0), alpha);  // RGBA, purple color
+    // if(v_uv.x < 0.02 && v_uv.y < 0.02)
+    //     gl_FragColor = vec4(vec3(1.), alpha);  // RGBA, purple color
+    // else
+    //     gl_FragColor = vec4(vec3(0.0, 0.0, 0.0), alpha);  // RGBA, purple color
 }
 
 void main2() {
