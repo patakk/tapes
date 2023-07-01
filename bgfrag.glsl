@@ -195,7 +195,9 @@ vec3 hardMixBlend(vec3 col1, vec3 col2) {
 void main() {
     vec3 color = texture2D(u_texture, v_uv).rgb;
 
-    float salt = rand(v_uv + 0.3 + u_seed.x);
+    float saltx = rand(v_uv + 0.3 + u_seed.x);
+    float salty = rand(v_uv + 0.3 + u_seed.x);
+    float salt = rand(v_uv + 0.3 + u_seed.x + saltx*2.314 + salty*2.314);
 
     vec2 sh = vec2(0.);
     sh.x = (fbm3(v_uv*113. + 0.1, 1.213)-.5);

@@ -10,7 +10,8 @@ let curves = [];
 let quads = [];
 let uvs = [];
 let infos = [];
-let transforms = [];
+let angles = [];
+let surfacetypes = [];
 
 let aspects = [
     3/4,
@@ -45,7 +46,8 @@ function main(options) {
     quads = [];
     uvs = [];
     infos = [];
-    transforms = [];
+    angles = [];
+    surfacetypes = [];
     
     SCALE = 4;
     //ASPECT = aspects[Math.floor(prng.rand()*aspects.length)];
@@ -164,6 +166,15 @@ function getBlueNoiseTexture() {
     return blueNoiseTexture;
 }
 
+function createAndSetupBuffer(gl, data, attributeLocation, size) {
+    let buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(attributeLocation);
+    gl.vertexAttribPointer(attributeLocation, size, gl.FLOAT, false, 0, 0);
+    return buffer;
+}
+
 let blueNoiseTexture;
 
 function render(){
@@ -182,15 +193,10 @@ function render(){
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-    let positionAttributeLocation = gl.getAttribLocation(program, "a_position");
-    let uvAttributeLocation = gl.getAttribLocation(program, "a_uv");
-    let infoAttributeLocation = gl.getAttribLocation(program, "a_info");
-    let transformAttributeLocation = gl.getAttribLocation(program, "a_transform");
     let simulationUniformLocation = gl.getUniformLocation(program, "u_simulation");
     let resolutionUniformLocation = gl.getUniformLocation(program, "u_resolution");
     let seedUniformLocation = gl.getUniformLocation(program, "u_seed");
     let versionUniformLocation = gl.getUniformLocation(program, "u_version");
-    let infoUniformLocation = gl.getUniformLocation(program, "u_info");
 
     // let colorUniformLocation = gl.getUniformLocation(program, "u_color");
 
@@ -204,39 +210,16 @@ function render(){
     let seedr = prng.rand();
     let seedg = prng.rand();
     let seedb = prng.rand();
-    // seedr = 0.926479;
-    // seedg = 0.480011;
-    // seedb = 0.005631;
-    console.log('seeds')
     console.log('seedr = ' + seedr.toFixed(6) + ';\nseedg = ' + seedg.toFixed(6) +  ';\nseedb = ' + seedb.toFixed(6) + ";");
 
     gl.uniform3f(seedUniformLocation, seedr, seedg, seedb);
     gl.uniform1f(versionUniformLocation, VERSION);
 
-    let positionBuffer = gl.createBuffer();
-    let uvBuffer = gl.createBuffer();
-    let infoBuffer = gl.createBuffer();
-    let transformBuffer = gl.createBuffer();
-    
-    let type = gl.FLOAT;   // the data is 32bit floats
-    let normalize = false; // don't normalize the data
-    let stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
-    let offset = 0;        // start at the beginning of the buffer
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, quads, gl.STATIC_DRAW);
-    gl.enableVertexAttribArray(positionAttributeLocation);
-    gl.vertexAttribPointer(positionAttributeLocation, 2, type, normalize, stride, offset);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, uvs, gl.STATIC_DRAW);
-    gl.enableVertexAttribArray(uvAttributeLocation);
-    gl.vertexAttribPointer(uvAttributeLocation, 2, type, normalize, stride, offset);
-    
-    gl.bindBuffer(gl.ARRAY_BUFFER, infoBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, infos, gl.STATIC_DRAW);
-    gl.enableVertexAttribArray(infoAttributeLocation);
-    gl.vertexAttribPointer(infoAttributeLocation, 3, type, normalize, stride, offset);
-
+    let _buf1 = createAndSetupBuffer(gl, quads,        gl.getAttribLocation(program, "a_position"), 2);
+    let _buf2 = createAndSetupBuffer(gl, uvs,          gl.getAttribLocation(program, "a_uv"), 2);
+    let _buf3 = createAndSetupBuffer(gl, infos,        gl.getAttribLocation(program, "a_info"), 1);
+    let _buf4 = createAndSetupBuffer(gl, angles,       gl.getAttribLocation(program, "a_angle"), 1);
+    let _buf5 = createAndSetupBuffer(gl, surfacetypes, gl.getAttribLocation(program, "a_surfactype"), 1);
 
     // gl.bindBuffer(gl.ARRAY_BUFFER, transformBuffer);
     // gl.bufferData(gl.ARRAY_BUFFER, transforms, gl.STATIC_DRAW);
@@ -267,7 +250,6 @@ function render(){
     gl.clearColor(rand(.9, .93), rand(.9, .92), rand(.89, .91), 1);
     gl.clearColor(rand(.3, .9), rand(.3, .9), rand(.3, .9), 1);
     gl.clearColor(0.04, 0.05, 0.05, 1);
-    gl.clearColor(rand(.87, .93), rand(.87, .93), rand(.87, .93), 1);
     let ooffb = rand(-.01, .01)
     let br = rand(.9, .93) + ooffb;
     let bg = rand(.9, .92) + ooffb;
@@ -289,13 +271,6 @@ function render(){
     let curve = curves[0];
     for(let i = 0; i < numQuads; i++) {
         const offset = i * 4; // 4 vertices per quad
-
-        let angle = Math.atan2(curve[i].y - curve[i+1].y, curve[i].x - curve[i+1].x);
-        console.log(angle)
-
-        gl.uniform3f(seedUniformLocation, seedr, seedg, seedb*(infos[offset*3]%2==1));
-        gl.uniform3f(infoUniformLocation, i, i, i);
-        gl.uniform2f(gl.getUniformLocation(program, "u_angle"), angle, angle);
         gl.drawArrays(gl.TRIANGLE_STRIP, offset, 4);
     }
 
@@ -425,6 +400,8 @@ function constructQuads(){
             let offset_0 = p1.clone();
             let angle_0 = Math.atan2(p3.y - p1.y, p3.x - p1.x); 
             
+            // let angle = Math.atan2(curve[i].y - curve[i+1].y, curve[i].x - curve[i+1].x);
+            
             let p13 = new Vector(p3.x - p1.x, p3.y - p1.y);
             let p34 = new Vector(p4.x - p3.x, p4.y - p3.y);
             let p31 = new Vector(p1.x - p3.x, p1.y - p3.y);
@@ -453,6 +430,8 @@ function constructQuads(){
     quads = new Float32Array(flatten(quads));
     uvs = new Float32Array(flatten(uvs));
     infos = new Float32Array(flatten(infos));
+    angles = new Float32Array(flatten(angles));
+    surfacetypes = new Float32Array(flatten(surfacetypes));
 }
 
 function addquadpointstoattributes(p1, p2, p3, p4, uv1=[0,0], uv2=[0,1], uv3=[1,0], uv4=[1,1], avgdist=1., j=0, offset_0=new Vector(0, 0), angle_0=0){
@@ -471,29 +450,59 @@ function addquadpointstoattributes(p1, p2, p3, p4, uv1=[0,0], uv2=[0,1], uv3=[1,
     uv3 = p3.clone().sub(offset_0).rotate(-angle_0).multiplyScalar(maxscale);
     uv4 = p4.clone().sub(offset_0).rotate(-angle_0).multiplyScalar(maxscale);
 
-    uv1 = [uv1.x, uv1.y];
-    uv2 = [uv2.x, uv2.y];
-    uv3 = [uv3.x, uv3.y];
-    uv4 = [uv4.x, uv4.y];
-
     let d1 = Math.sqrt(Math.pow(p1.x - p3.x, 2) + Math.pow(p1.y - p3.y, 2));
     let d2 = Math.sqrt(Math.pow(p2.x - p4.x, 2) + Math.pow(p2.y - p4.y, 2));
     let d3 = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
     uvs.push(
         [
-            uv1,
-            uv2,
-            uv3,
-            uv4,
+            [uv1.x, uv1.y],
+            [uv2.x, uv2.y],
+            [uv3.x, uv3.y],
+            [uv4.x, uv4.y],
         ]
     );
-    let seed = j;
+    let index = j;
     infos.push(
         [
-            [seed, seed, seed],
-            [seed, seed, seed],
-            [seed, seed, seed],
-            [seed, seed, seed],
+            [index],
+            [index],
+            [index],
+            [index],
+        ]
+    );
+    angles.push(
+        [
+            [angle_0],
+            [angle_0],
+            [angle_0],
+            [angle_0],
+        ]
+    );
+    let tt = index%2;
+    if(vversion == 0){
+        tt = 0;
+    }
+    if(vversion == 1){
+        tt = index%2 * 1;
+    }
+    if(vversion == 2){
+        tt = index%2 * 2;
+    }
+    if(vversion == 3){
+        tt = 1;
+    }
+    if(vversion == 4){
+        tt = 2;
+    }
+    if(vversion == 5){
+        tt = 3;
+    }
+    surfacetypes.push(
+        [
+            [tt],
+            [tt],
+            [tt],
+            [tt],
         ]
     );
 }

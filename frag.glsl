@@ -1,13 +1,12 @@
 precision mediump float;
 
 uniform vec3 u_seed;
-uniform float u_version;
-uniform vec3 u_info;
 uniform vec2 u_resolution;
-uniform vec2 u_angle;
 
 varying vec2 v_uv;
-varying vec3 v_info;
+varying float v_info;
+varying float v_angle;
+varying float v_surfactype;
 uniform float u_postproc;
 
 uniform sampler2D u_randomTexture;
@@ -22,14 +21,6 @@ vec4 hcrandom(vec3 co) {
     // Sample the texture and return a random value in the range [0, 1].
     return texture2D(u_randomTexture, uv).rgba;
 }
-
-
-// float hash12(vec2 p)
-// {
-// 	vec3 p3  = fract(vec3(p.xyx) * .1031);
-//     p3 += dot(p3, p3.yzx + 33.33);
-//     return fract((p3.x + p3.y) * p3.z);
-// }
 
 
 float hash12(vec2 p)
@@ -54,7 +45,7 @@ float noise (vec2 _st) {
             (d - b) * u.x * u.y;
 }
 
-float noise3 (vec2 _st,float t) {
+float noise3(vec2 _st,float t) {
     vec2 i = floor(_st+t);
     vec2 f = fract(_st+t);
 
@@ -71,7 +62,7 @@ float noise3 (vec2 _st,float t) {
             (d - b) * u.x * u.y;
 }
 
-float fbm (vec2 _st) {
+float fbm(vec2 _st) {
     float v = 0.0;
     float a = 0.5;
     vec2 shift = vec2(100.0);
@@ -87,6 +78,10 @@ float fbm (vec2 _st) {
 }
 
 
+vec3 random3(vec3 c) {
+	return hcrandom(c).rgb;
+}
+
 // vec3 random3(vec3 c) {
 // 	float j = 4096.0*sin(dot(c,vec3(17.0, 59.4, 15.0)));
 // 	vec3 r;
@@ -98,57 +93,32 @@ float fbm (vec2 _st) {
 // 	return r-0.5;
 // }
 
-vec3 random3(vec3 c) {
-	return hcrandom(c).rgb;
-}
-/* skew constants for 3d simplex functions */
+
 const float F3 =  0.3333333;
 const float G3 =  0.1666667;
 
-/* 3d simplex noise */
 float simplex3d(vec3 p) {
-	 /* 1. find current tetrahedron T and it's four vertices */
-	 /* s, s+i1, s+i2, s+1.0 - absolute skewed (integer) coordinates of T vertices */
-	 /* x, x1, x2, x3 - unskewed coordinates of p relative to each of T vertices*/
-	 
-	 /* calculate s and x */
 	 vec3 s = floor(p + dot(p, vec3(F3)));
 	 vec3 x = p - s + dot(s, vec3(G3));
-	 
-	 /* calculate i1 and i2 */
 	 vec3 e = step(vec3(0.0), x - x.yzx);
 	 vec3 i1 = e*(1.0 - e.zxy);
 	 vec3 i2 = 1.0 - e.zxy*(1.0 - e);
-	 	
-	 /* x1, x2, x3 */
 	 vec3 x1 = x - i1 + G3;
 	 vec3 x2 = x - i2 + 2.0*G3;
 	 vec3 x3 = x - 1.0 + 3.0*G3;
-	 
-	 /* 2. find four surflets and store themd */
 	 vec4 w, d;
-	 
-	 /* calculate surflet weights */
 	 w.x = dot(x, x);
 	 w.y = dot(x1, x1);
 	 w.z = dot(x2, x2);
 	 w.w = dot(x3, x3);
-	 
-	 /* w fades from 0.6 at the center of the surflet to 0.0 at the margin */
 	 w = max(0.6 - w, 0.0);
-	 
-	 /* calculate surflet components */
 	 d.x = dot(random3(s), x);
 	 d.y = dot(random3(s + i1), x1);
 	 d.z = dot(random3(s + i2), x2);
 	 d.w = dot(random3(s + 1.0), x3);
-	 
-	 /* multiply d by w^4 */
 	 w *= w;
 	 w *= w;
 	 d *= w;
-	 
-	 /* 3. return the sum of the four surflets */
 	 return .5+.5*dot(d, vec4(52.0));
 }
 
@@ -252,50 +222,37 @@ vec3 hardMixBlend(vec3 col1, vec3 col2) {
 
 void main() {
 
-    vec3 red = vec3(.8, .2, 0.);
-    vec3 orange = vec3(.8, .4, 0.);
-    vec3 yellow = vec3(.8, .8, 0.);
-    vec3 green = vec3(.2, .8, 0.);
-    vec3 blue = vec3(.2, .4, .8);
-    vec3 purple = vec3(.8, .2, .8);
-    vec3 white = vec3(.8, .8, .8);
-    vec3 drakblue = vec3(.0, .0, .4);
-
     float alpha = 1.;
     float rnd = rand(vec2(v_uv.x, v_uv.y));
 
     float var = v_uv.x * .00051;
     var = v_uv.x*.5;
-    // if(u_seed.z < 0.5){
-    //     var = v_uv.y*1.5;
-    // }
 
-    float vix = rand(vec2(v_info.x, v_info.x)/3.)*0.;
+    float vix = rand(vec2(v_info, v_info)/3.)*0.;
 
     float sm1 = .1;
     float sm2 = .9;
     float pw = 1.;
     float shiftr = u_seed.x*12.;
     float shiftg = u_seed.y*12.;
-    float shiftb = u_seed.z*12.;
+    float shiftb = u_seed.z*12. * floor(v_info);
     
     float freq = .25 + 1.*hash12(vec2(u_seed.r*1.234, u_seed.g*3.231+u_seed.b*3.1));
     freq *= 1. + 1.3*pow(clamp(v_uv.x, 0., 1.), 4.);
-
+    freq = 1.;
     float xx = var*.71*freq;
-    float r = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, shiftr))), pw);
-    float g = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, shiftg))), pw);
-    float b = power(smoothstep(sm1, sm2, simplex3d(vec3(xx, xx, shiftb))), pw);
-    if(hash12(vec2(u_seed.r, u_seed.g+u_seed.b)) < .5){
+    float r = power(smoothstep(sm1, sm2, simplex3d(1.*vec3(xx, xx, shiftr))), pw);
+    float g = power(smoothstep(sm1, sm2, simplex3d(1.*vec3(xx, xx, shiftg))), pw);
+    float b = power(smoothstep(sm1, sm2, simplex3d(1.*vec3(xx, xx, shiftb))), pw);
+    if(hash12(vec2(u_seed.r, u_seed.g+u_seed.b)) < -.5){
         r = 0.5 + sin(xx*14. + shiftr*1112.13)*0.5;
         g = 0.5 + sin(xx*14. + shiftg*1112.13)*0.5;
         b = 0.5 + sin(xx*14. + shiftb*1112.13)*0.5;
     }
     
     vec2 glfrg = vec2(gl_FragCoord.x, gl_FragCoord.y);
-    float angle = u_angle.x;
-    float s = sin(angle);
-    float c = cos(angle);
+    float s = sin(v_angle);
+    float c = cos(v_angle);
     mat2 rot = mat2(c, -s, s, c);
     glfrg = rot * glfrg;
     float streak = hash12(vec2(mod(floor(glfrg.x), 334.12314)));
@@ -327,13 +284,13 @@ void main() {
     //     float hhhs = hash12(vec2(v_uv.x*.01, v_uv.y*.01));
     //     gl_FragColor = vec4(hhhs*.9+.1, hhhs*.9+.1, hhhs*.9+.1, alpha);  // RGBA, purple color
     // }
-    if(u_seed.z < 0.001 && abs(u_version-1.0) < 0.001 || abs(u_version-3.0) < 0.001){  // zebra
+    if(v_surfactype == 1.0){  // zebra
         float ooo = power(clamp(simplex3d(vec3(v_uv.x, v_uv.y, u_seed.x*100.+vix*20. + 551.55)), 0., 1.), 3.);
-        ooo = fbm3(v_uv.xy*3., v_info.x*0.1);
+        ooo = fbm3(v_uv.xy*3., v_info*0.1);
         ooo = smoothstep(.25, .75, ooo);
-        float uvx = v_uv.x + .07*fbm3(v_uv.xy*3., v_info.x*0.1);
-        float uvx2 = v_uv.x + .07*fbm3(v_uv.xy*3.-vec2(0., 0.06), v_info.x*0.1);
-        float oo = hash12(vec2(v_info.x*110.4, v_info.y*110.4));
+        float uvx = v_uv.x + .07*fbm3(v_uv.xy*3., v_info*0.1);
+        float uvx2 = v_uv.x + .07*fbm3(v_uv.xy*3.-vec2(0., 0.06), v_info*0.1);
+        float oo = hash12(vec2(v_info*110.4, v_info*110.4));
         float ix = (uvx*(77.+77.*oo));
         float ix2 = (uvx2*(77.+77.*oo));
         float rr1 = (.1 + .1*ooo)+.8*smoothstep(.96, 1.04, mod(ix, 2.));
@@ -341,30 +298,30 @@ void main() {
         rr1 *= .95 + (1.-.95)*(1.-v_uv.x);
         gl_FragColor = vec4(vec3(rr1, rr1, rr1), alpha);  // RGBA, purple color
     }
-    if(u_seed.z < 0.001 && abs(u_version-2.0) < 0.001 || abs(u_version-4.0) < 0.001){
+    if(v_surfactype == 2.0){
         float rnd = rand(vec2(v_uv.x, v_uv.y));
         float var = v_uv.x;
-        float oo = hash12(vec2(v_info.x*0.4, v_info.y*0.4)) * 0. + 1.;
+        float oo = hash12(vec2(v_info*0.4, v_info*0.4)) * 0. + 1.;
         float ix = floor(v_uv.x*(99.+77.*oo));
         float iy = floor(v_uv.y*(99.+77.*oo));
         float rr = clamp(.05 + (mod(ix,  3.) * (mod(iy, 3.))), 0., 1.);
         rr *= .9 + (1.-.9)*(1.-v_uv.x);
         gl_FragColor = vec4(vec3(rr, rr, rr), alpha);  // RGBA, purple color
     }
-    if(abs(u_version-5.0) < 0.001){
+    if(v_surfactype == 3.0){
         vec2 varr = v_uv.xy*1.5;
         float ooo = power(clamp(simplex3d(vec3(varr.x, varr.y, u_seed.x*100.+vix*20. + 551.55)), 0., 1.), 3.);
-        ooo = fbm3(varr.xy*3., v_info.x*0.1);
+        ooo = fbm3(varr.xy*3., v_info*0.1);
         ooo = smoothstep(.25, .75, ooo);
-        float uvx = varr.y + .07*fbm3(varr.xy*3., v_info.x*0.1);
-        float uvx2 = varr.y + .07*fbm3(varr.xy*3.-vec2(0., 0.06), v_info.x*0.1);
-        float oo = hash12(vec2(v_info.x*110.4, v_info.y*110.4));
+        float uvx = varr.y + .07*fbm3(varr.xy*3., v_info*0.1);
+        float uvx2 = varr.y + .07*fbm3(varr.xy*3.-vec2(0., 0.06), v_info*0.1);
+        float oo = hash12(vec2(v_info*110.4, v_info*110.4));
         float ix = (uvx*(77.+36.*oo*2.+1.));
         float ix2 = (uvx2*(77.+36.*oo*2.+1.));
         float rr1 = (.1 + .1*ooo)+.8*smoothstep(.8, 1.2, mod(ix, 2.));
         float rr2 = (.1 + .1*ooo)+.8*smoothstep(.8, 1.2, mod(ix2, 2.));
         rr2 = 0.0;
-        if((ix < 12.-floor(12.*u_seed.y) || ix > 15.) && u_seed.z < 0.001){
+        if((ix < 12.-floor(12.*u_seed.y) || ix > 15.) && floor(mod(v_info, 2.)) < 0.5){
             alpha = 0.;
         }
         rr1 *= .9 + (1.-.9)*(1.-varr.x);
@@ -383,7 +340,7 @@ void main2() {
 
     float var = v_uv.x;
 
-    float oo = hash12(vec2(v_info.x*0.4, v_info.y*0.4)) * 0. + 1.;
+    float oo = hash12(vec2(v_info*0.4, v_info*0.4)) * 0. + 1.;
     float ix = floor(v_uv.x*(111.+77.*oo));
     float iy = floor(v_uv.y*(111.+77.*oo));
 
