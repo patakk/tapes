@@ -215,7 +215,7 @@ void main() {
     // result = result + (vec3(1.) - result)*.0;
 
     vec2 abspos = v_uv * u_resolution;
-    float marg = min(u_resolution.x, u_resolution.y) * .01;
+    float marg = min(u_resolution.x, u_resolution.y) * .01 * 0.;
 
     if(u_postproc > 0.9){
         result = result + .096*(-.5 + salt);

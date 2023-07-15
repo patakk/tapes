@@ -210,7 +210,7 @@ function render(){
     let seedr = prng.rand();
     let seedg = prng.rand();
     let seedb = prng.rand();
-    console.log('seedr = ' + seedr.toFixed(6) + ';\nseedg = ' + seedg.toFixed(6) +  ';\nseedb = ' + seedb.toFixed(6) + ";");
+    // console.log('seedr = ' + seedr.toFixed(6) + ';\nseedg = ' + seedg.toFixed(6) +  ';\nseedb = ' + seedb.toFixed(6) + ";");
 
     gl.uniform3f(seedUniformLocation, seedr, seedg, seedb);
     gl.uniform1f(versionUniformLocation, VERSION);
@@ -266,11 +266,13 @@ function render(){
     }
     gl.clearColor(0.9254902, 0.92156863, 0.90588235, 1.);
     gl.clear(gl.COLOR_BUFFER_BIT);
+    let u_freqvary = Math.floor(rand(0, 2));
+    // console.log(u_freqvary)
+    gl.uniform1f(gl.getUniformLocation(program, "u_freqvary"), u_freqvary);
     let numQuads = quads.length / 8;
-    let numInfos = infos.length / 12;
-    let curve = curves[0];
     for(let i = 0; i < numQuads; i++) {
         const offset = i * 4; // 4 vertices per quad
+        gl.uniform1f(gl.getUniformLocation(program, "u_quadindex"), i);
         gl.drawArrays(gl.TRIANGLE_STRIP, offset, 4);
     }
 
@@ -556,7 +558,7 @@ function setupCurves(options){
     let aaa = DIM;
     let bbb = Math.floor(DIM/ASPECT);
     let margin = aaa*.12;
-    let numangles = 14;
+    let numangles = Math.floor(rand(3, 12));
 
     while(!success && ctries++ < 100){
         let pos = new Vector(aaa/2 + rand(-222, 222), bbb/2 + rand(-222, 222));

@@ -1,4 +1,4 @@
-precision mediump float;
+precision highp float;
 
 uniform vec3 u_seed;
 uniform vec2 u_resolution;
@@ -8,6 +8,9 @@ varying float v_info;
 varying float v_angle;
 varying float v_surfactype;
 uniform float u_postproc;
+uniform float u_quadindex;
+
+uniform float u_freqvary;
 
 uniform sampler2D u_randomTexture;
 uniform vec2 u_randomTextureSize;
@@ -226,24 +229,29 @@ void main() {
     float rnd = rand(vec2(v_uv.x, v_uv.y));
 
     float var = v_uv.x * .00051;
+    float vary = v_uv.x * .00051;
     var = v_uv.x*.5;
+    vary = v_uv.y*.5;
 
-    float vix = rand(vec2(v_info, v_info)/3.)*0.;
+    float vix = rand(vec2(u_quadindex, u_quadindex)/3.)*0.;
 
     float sm1 = .1;
     float sm2 = .9;
     float pw = 1.;
     float shiftr = u_seed.x*12.;
     float shiftg = u_seed.y*12.;
-    float shiftb = u_seed.z*12. * floor(v_info);
+    float shiftb = u_seed.z*12.;
     
     float freq = .25 + 1.*hash12(vec2(u_seed.r*1.234, u_seed.g*3.231+u_seed.b*3.1));
+    float freqy = .25 + .3*hash12(vec2(u_seed.r*5.234, u_seed.g*2.231+u_seed.b*1.1));
     freq *= 1. + 1.3*pow(clamp(v_uv.x, 0., 1.), 4.);
-    freq = 1.;
+    freqy *= 1. + 1.3*pow(clamp(v_uv.y, 0., 1.), 4.);
+    freq = 1.*(1.-u_freqvary) + u_freqvary*freq;
     float xx = var*.71*freq;
-    float r = power(smoothstep(sm1, sm2, simplex3d(1.*vec3(xx, xx, shiftr))), pw);
-    float g = power(smoothstep(sm1, sm2, simplex3d(1.*vec3(xx, xx, shiftg))), pw);
-    float b = power(smoothstep(sm1, sm2, simplex3d(1.*vec3(xx, xx, shiftb))), pw);
+    float yy = vary*.51*freq;
+    float r = smoothstep(sm1, sm2, simplex3d(1.*vec3(xx, yy, shiftr)));
+    float g = smoothstep(sm1, sm2, simplex3d(1.*vec3(xx, yy, shiftg)));
+    float b = smoothstep(sm1, sm2, simplex3d(1.*vec3(xx, yy, shiftb)));
     if(hash12(vec2(u_seed.r, u_seed.g+u_seed.b)) < -.5){
         r = 0.5 + sin(xx*14. + shiftr*1112.13)*0.5;
         g = 0.5 + sin(xx*14. + shiftg*1112.13)*0.5;
@@ -286,11 +294,11 @@ void main() {
     // }
     if(v_surfactype == 1.0){  // zebra
         float ooo = power(clamp(simplex3d(vec3(v_uv.x, v_uv.y, u_seed.x*100.+vix*20. + 551.55)), 0., 1.), 3.);
-        ooo = fbm3(v_uv.xy*3., v_info*0.1);
+        ooo = fbm3(v_uv.xy*3., u_quadindex*0.1);
         ooo = smoothstep(.25, .75, ooo);
-        float uvx = v_uv.x + .07*fbm3(v_uv.xy*3., v_info*0.1);
-        float uvx2 = v_uv.x + .07*fbm3(v_uv.xy*3.-vec2(0., 0.06), v_info*0.1);
-        float oo = hash12(vec2(v_info*110.4, v_info*110.4));
+        float uvx = v_uv.x + .07*fbm3(v_uv.xy*3., u_quadindex*0.1);
+        float uvx2 = v_uv.x + .07*fbm3(v_uv.xy*3.-vec2(0., 0.06), u_quadindex*0.1);
+        float oo = hash12(vec2(u_quadindex*110.4, u_quadindex*110.4));
         float ix = (uvx*(77.+77.*oo));
         float ix2 = (uvx2*(77.+77.*oo));
         float rr1 = (.1 + .1*ooo)+.8*smoothstep(.96, 1.04, mod(ix, 2.));
@@ -301,7 +309,7 @@ void main() {
     if(v_surfactype == 2.0){
         float rnd = rand(vec2(v_uv.x, v_uv.y));
         float var = v_uv.x;
-        float oo = hash12(vec2(v_info*0.4, v_info*0.4)) * 0. + 1.;
+        float oo = hash12(vec2(u_quadindex*0.4, u_quadindex*0.4)) * 0. + 1.;
         float ix = floor(v_uv.x*(99.+77.*oo));
         float iy = floor(v_uv.y*(99.+77.*oo));
         float rr = clamp(.05 + (mod(ix,  3.) * (mod(iy, 3.))), 0., 1.);
@@ -311,17 +319,17 @@ void main() {
     if(v_surfactype == 3.0){
         vec2 varr = v_uv.xy*1.5;
         float ooo = power(clamp(simplex3d(vec3(varr.x, varr.y, u_seed.x*100.+vix*20. + 551.55)), 0., 1.), 3.);
-        ooo = fbm3(varr.xy*3., v_info*0.1);
+        ooo = fbm3(varr.xy*3., u_quadindex*0.1);
         ooo = smoothstep(.25, .75, ooo);
-        float uvx = varr.y + .07*fbm3(varr.xy*3., v_info*0.1);
-        float uvx2 = varr.y + .07*fbm3(varr.xy*3.-vec2(0., 0.06), v_info*0.1);
-        float oo = hash12(vec2(v_info*110.4, v_info*110.4));
+        float uvx = varr.y + .07*fbm3(varr.xy*3., u_quadindex*0.1);
+        float uvx2 = varr.y + .07*fbm3(varr.xy*3.-vec2(0., 0.06), u_quadindex*0.1);
+        float oo = hash12(vec2(u_quadindex*110.4, u_quadindex*110.4));
         float ix = (uvx*(77.+36.*oo*2.+1.));
         float ix2 = (uvx2*(77.+36.*oo*2.+1.));
         float rr1 = (.1 + .1*ooo)+.8*smoothstep(.8, 1.2, mod(ix, 2.));
         float rr2 = (.1 + .1*ooo)+.8*smoothstep(.8, 1.2, mod(ix2, 2.));
         rr2 = 0.0;
-        if((ix < 12.-floor(12.*u_seed.y) || ix > 15.) && floor(mod(v_info, 2.)) < 0.5){
+        if((ix < 12.-floor(12.*u_seed.y) || ix > 15.) && floor(mod(u_quadindex, 2.)) < 0.5){
             alpha = 0.;
         }
         rr1 *= .9 + (1.-.9)*(1.-varr.x);
@@ -340,7 +348,7 @@ void main2() {
 
     float var = v_uv.x;
 
-    float oo = hash12(vec2(v_info*0.4, v_info*0.4)) * 0. + 1.;
+    float oo = hash12(vec2(u_quadindex*0.4, u_quadindex*0.4)) * 0. + 1.;
     float ix = floor(v_uv.x*(111.+77.*oo));
     float iy = floor(v_uv.y*(111.+77.*oo));
 
