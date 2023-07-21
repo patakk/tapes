@@ -215,8 +215,12 @@ void main() {
     // result = result + (vec3(1.) - result)*.0;
 
     vec2 abspos = v_uv * u_resolution;
-    float marg = min(u_resolution.x, u_resolution.y) * .01 * 0.;
+    float marg = min(u_resolution.x, u_resolution.y) * .01;
 
+    if(abspos.x < marg || abspos.x > u_resolution.x - marg || abspos.y < marg || abspos.y > u_resolution.y - marg){
+        //result = vec3(.15);
+    }
+    
     if(u_postproc > 0.9){
         result = result + .096*(-.5 + salt);
         // vec3 bluenosie = texture2D(u_bluenoiseTexture, mod(gl_FragCoord.xy/u_bluenoiseTextureSize + u_seed.rg*12.31, 1.)*.495).rgb;
@@ -226,9 +230,6 @@ void main() {
         vec3 result2 = result*.25 + (-.25+1.)*hardMixBlend(result, vec3(hash12(mod(gl_FragCoord.xy + u_seed.rg*132.31, 111.))));
         result = 0.92*result + (-.92+1.)*(1. - (1.-result)*(1.-result2));
         // result = result2;
-    }
-    if(abspos.x < marg || abspos.x > u_resolution.x - marg || abspos.y < marg || abspos.y > u_resolution.y - marg){
-        result = vec3(.15);
     }
     result = clamp(result, 0., 1.);
 

@@ -38,9 +38,9 @@ if(search.has('debug')){
 }
 
 
-function main(options) {
+function main() {
     
-    updateURLParameter('hash', btoa(JSON.stringify({"hash": hash, "aspect": Math.round(aaspect*10000)/10000, 'version': vversion})).toString('base64'));
+    // updateURLParameter('hash', btoa(JSON.stringify({"hash": hash, "aspect": Math.round(aaspect*10000)/10000, 'version': VERSION})).toString('base64'));
 
     curves = [];
     quads = [];
@@ -51,12 +51,13 @@ function main(options) {
     
     SCALE = 4;
     //ASPECT = aspects[Math.floor(prng.rand()*aspects.length)];
-    ASPECT = options.aspect;
-    VERSION = options.version;
+    ASPECT = 3. / 4
+    VERSION = Math.floor(random() * 3);
 
     EDGE_OFFSET = 50;
     if(ASPECT >= 1)
         EDGE_OFFSET = window.innerHeight*.1;
+    EDGE_OFFSET /= 3;
     THICKNESS = 70 * SCALE;
     THICKNESS = rand(66, 77) * SCALE;
     THICKNESS = rand(20, 40) * SCALE;
@@ -73,7 +74,7 @@ function main(options) {
 
     gl.viewport(0, 0, REN, Math.round(REN/ASPECT));
 
-    setupCurves(options);
+    setupCurves();
     if(DEBUG) previewCurves()
     constructQuads();
 
@@ -260,11 +261,12 @@ function render(){
         bb = rand(.89, .91) + ooffb;
     }
     gl.clearColor(br, bg, bb, 1);
-    if(vversion == 3 || vversion == 4 || vversion == 5){
+    if(VERSION == 3 || VERSION == 4 || VERSION == 5){
         let aq = rand(.87, .93);
         gl.clearColor(aq, aq, aq, 1);
     }
     gl.clearColor(0.9254902, 0.92156863, 0.90588235, 1.);
+    gl.clearColor(0.9254902*1.05, 0.92156863*1.045, 0.90588235*1.05, 1.);
     gl.clear(gl.COLOR_BUFFER_BIT);
     let u_freqvary = Math.floor(rand(0, 2));
     // console.log(u_freqvary)
@@ -481,22 +483,22 @@ function addquadpointstoattributes(p1, p2, p3, p4, uv1=[0,0], uv2=[0,1], uv3=[1,
         ]
     );
     let tt = index%2;
-    if(vversion == 0){
+    if(VERSION == 0){
         tt = 0;
     }
-    if(vversion == 1){
+    if(VERSION == 1){
         tt = index%2 * 1;
     }
-    if(vversion == 2){
+    if(VERSION == 3){
         tt = index%2 * 2;
     }
-    if(vversion == 3){
+    if(VERSION == 2){
         tt = 1;
     }
-    if(vversion == 4){
+    if(VERSION == 4){
         tt = 2;
     }
-    if(vversion == 5){
+    if(VERSION == 5){
         tt = 3;
     }
     surfacetypes.push(
@@ -548,12 +550,12 @@ function intersects(point, curve){
     return false;
 }
 
-function setupCurves(options){
+function setupCurves(){
 
     let success = false;
     let ctries = 0;
     let curve = [];
-    let pathsteps = Math.round(rand(4, 6))*2;
+    let pathsteps = Math.round(rand(4, 9))*2;
 
     let aaa = DIM;
     let bbb = Math.floor(DIM/ASPECT);
@@ -696,25 +698,21 @@ function power(p, g) {
         return 1 - 0.5 * Math.pow(2*(1 - p), g);
 }
 
-function runmain(){
-    main({'aspect': aaspect, 'version': vversion});
-}
-
 // on load html, no jquery
-window.onload = runmain;
+window.onload = main;
 window.addEventListener('resize', onresize, false);
 
-function randomizeState(){
-    hash = (Math.random() + 1).toString(16).substring(2);
-    editionNumber = p.editionNumber || 0;
+// function randomizeState(){
+//     hash = (Math.random() + 1).toString(16).substring(2);
+//     editionNumber = p.editionNumber || 0;
 
-    Random=function(n){var r,$,t,u,_=function n(r){for(var $=0,t=1779033703^r.length;$<r.length;$++)t=(t=Math.imul(t^r.charCodeAt($),3432918353))<<13|t>>>19;return function(){return t=Math.imul((t=Math.imul(t^t>>>16,2246822507))^t>>>13,3266489909),(t^=t>>>16)>>>0}}(n),o={rand:(r=_(),$=_(),t=_(),u=_(),function(){t|=0;var n=((r|=0)+($|=0)|0)+(u|=0)|0;return u=u+1|0,r=$^$>>>9,$=t+(t<<3)|0,t=(t=t<<21|t>>>11)+n|0,(n>>>0)/4294967296}),randInt:function(n,r){return n+Math.floor((r-n)*o.rand())}};return o};
-}
+//     Random=function(n){var r,$,t,u,_=function n(r){for(var $=0,t=1779033703^r.length;$<r.length;$++)t=(t=Math.imul(t^r.charCodeAt($),3432918353))<<13|t>>>19;return function(){return t=Math.imul((t=Math.imul(t^t>>>16,2246822507))^t>>>13,3266489909),(t^=t>>>16)>>>0}}(n),o={rand:(r=_(),$=_(),t=_(),u=_(),function(){t|=0;var n=((r|=0)+($|=0)|0)+(u|=0)|0;return u=u+1|0,r=$^$>>>9,$=t+(t<<3)|0,t=(t=t<<21|t>>>11)+n|0,(n>>>0)/4294967296}),randInt:function(n,r){return n+Math.floor((r-n)*o.rand())}};return o};
+// }
 
-function initRandomState(){
-    prng = Random(hash);
-    random = prng.rand;
-}
+// function initRandomState(){
+//     prng = Random(hash);
+//     random = prng.rand;
+// }
 
 // handle keys
 document.addEventListener('keydown', function(event) {
@@ -722,41 +720,41 @@ document.addEventListener('keydown', function(event) {
     if(event.key == 's') {
         save();
     }
-    else if ('qat123456'.indexOf(event.key) !== -1) {
-        if(event.key == '1') {
-            vversion = 0;
-        }
-        if(event.key == '2') {
-            vversion = 1;
-        }
-        if(event.key == '3') {
-            vversion = 2;
-        }
-        if(event.key == '4') {
-            vversion = 3;
-        }
-        if(event.key == '5') {
-            vversion = 4;
-        }
-        if(event.key == '6') {
-            vversion = 5;
-        }
-        if(event.key == 'a') {
-            if(aaspect > 1)
-                aaspect = 3/4;
-            else
-                aaspect = 4/3;
-        }
-        if(event.key == 't') {
-            POSTPROC = !POSTPROC;
-        }
-        if ('q1234567'.indexOf(event.key) !== -1){
-            randomizeState();
-        }
-        initRandomState();
-        // updateURLParameter('hash', btoa(JSON.stringify({"hash": hash, "aspect": Math.round(aaspect*10000)/10000, 'version': vversion})).toString('base64'));
-        main({'aspect': aaspect, 'version': vversion});
-    }
+    // else if ('qat123456'.indexOf(event.key) !== -1) {
+    //     if(event.key == '1') {
+    //         VERSION = 0;
+    //     }
+    //     if(event.key == '2') {
+    //         VERSION = 1;
+    //     }
+    //     if(event.key == '3') {
+    //         VERSION = 2;
+    //     }
+    //     if(event.key == '4') {
+    //         VERSION = 3;
+    //     }
+    //     if(event.key == '5') {
+    //         VERSION = 4;
+    //     }
+    //     if(event.key == '6') {
+    //         VERSION = 5;
+    //     }
+    //     if(event.key == 'a') {
+    //         if(aaspect > 1)
+    //             aaspect = 3/4;
+    //         else
+    //             aaspect = 4/3;
+    //     }
+    //     if(event.key == 't') {
+    //         POSTPROC = !POSTPROC;
+    //     }
+    //     if ('q1234567'.indexOf(event.key) !== -1){
+    //         randomizeState();
+    //     }
+    //     initRandomState();
+    //     // updateURLParameter('hash', btoa(JSON.stringify({"hash": hash, "aspect": Math.round(aaspect*10000)/10000, 'version': VERSION})).toString('base64'));
+    //     main();
+    // }
 });
 
 
@@ -852,7 +850,7 @@ function save(){
     console.log('preparing canvas for saving...');
     const dataURL = canvas.toDataURL('image/png');
     const link = document.createElement('a');
-    link.download = 'render_' + btoa(JSON.stringify({"hash": hash,"aspect": Math.round(ASPECT*10000)/10000, 'version': VERSION})).toString('base64') + '.png';
+    link.download = 'render_' + btoa(JSON.stringify({"hash": hash})).toString('base64') + '.png';
     // link.href = imgElement.src;
     link.href = dataURL;
     link.click();
