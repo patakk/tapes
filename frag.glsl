@@ -6,6 +6,7 @@ uniform vec2 u_resolution;
 varying vec2 v_uv;
 varying float v_info;
 varying float v_angle;
+varying vec3 v_rando;
 varying float v_surfactype;
 uniform float u_postproc;
 uniform float u_quadindex;
@@ -238,14 +239,17 @@ void main() {
     float sm1 = .1;
     float sm2 = .9;
     float pw = 1.;
-    float shiftr = u_seed.x*12. + 13.*hash12(vec2(v_info*.1));
-    float shiftg = u_seed.y*12. + 13.*hash12(vec2(v_info*.1+31.43));
-    float shiftb = u_seed.z*12. + 13.*hash12(vec2(v_info*.1+22.54));
+    float shiftr = u_seed.x*12. + 13. * v_rando.r;
+    float shiftg = u_seed.y*12. + 13. * v_rando.g;
+    float shiftb = u_seed.z*12. + 13. * v_rando.b;
     
-    float freq = .25 + 1.*hash12(vec2(u_seed.r*1.234, u_seed.g*3.231+u_seed.b*3.1));
+    float freq = .25 + 2.*hash12(vec2(u_seed.r*1.234, u_seed.g*3.231+u_seed.b*3.1));
+    if(hash12(vec2(u_seed.r+3.12, u_seed.g + u_seed.b)) < -.5) {
+        freq = .25 + 2. * hash12(vec2(u_quadindex + u_seed.r * 1.234, u_quadindex + u_seed.g * 3.231 + u_quadindex + u_seed.b * 3.1));
+    }
     float freqy = .25 + .3*hash12(vec2(u_seed.r*5.234, u_seed.g*2.231+u_seed.b*1.1));
-    freq *= 1. + 1.3*pow(clamp(v_uv.x, 0., 1.), 3.);
-    freqy *= 1. + 1.3*pow(clamp(v_uv.y, 0., 1.), 3.);
+    // freq *= 1. + 5.3*pow(clamp(v_uv.x, 0., 1.), 3.);
+    // freqy *= 1. + 5.3*pow(clamp(v_uv.y, 0., 1.), 3.);
     // freq = 1.*(1.-u_freqvary) + u_freqvary*freq;
     float xx = var*.71*freq;
     float yy = vary*.51*freq;
@@ -301,13 +305,20 @@ void main() {
         float ooo = power(clamp(simplex3d(vec3(v_uv.x, v_uv.y, u_seed.x*100.+vix*20. + 551.55)), 0., 1.), 3.);
         ooo = fbm3(v_uv.xy*3., u_quadindex*0.1);
         ooo = smoothstep(.25, .75, ooo);
-        float uvx = v_uv.x + .07*fbm3(v_uv.xy*3., u_quadindex*0.1);
-        float uvx2 = v_uv.x + .07*fbm3(v_uv.xy*3.-vec2(0., 0.06), u_quadindex*0.1);
-        float oo = hash12(vec2(u_quadindex*110.4, u_quadindex*110.4));
+        float uvx = v_uv.x + .07*fbm3(v_uv.xy * 3., u_quadindex * 0.1);
+        // uvx = v_uv.x;
+        // float var1 = 2.4 * simplex3d(vec3(v_uv.xy * 2., u_quadindex * 0.4 + 31.12));
+        // float var2 = .4 * simplex3d(vec3(v_uv.xy * 2., u_quadindex * 0.4 + 133.12));
+        // uvx += .03 * simplex3d(vec3(v_uv.xy * 3., u_quadindex * 0.4+ 22.12));
+        // uvx += .01 * simplex3d(vec3(v_uv.xy * 13., u_quadindex * 0.4+ 15.12));
+        // uvx += .002 * simplex3d(vec3(v_uv.xy*177.+var1, u_quadindex*0.4+31.12));
+        // float uvx2 = v_uv.x + .07*fbm3(v_uv.xy*3.-vec2(0., 0.06), u_quadindex*0.1);
+        float oo = 0.*hash12(vec2(u_quadindex*110.4, u_quadindex*110.4));
+        oo = mod(v_rando.r + v_rando.g + v_rando.b, 1.);
         float ix = (uvx*(77.+77.*oo));
-        float ix2 = (uvx2*(77.+77.*oo));
+        // float ix2 = (uvx2*(77.+77.*oo));
         float rr1 = (.1 + .1*ooo)+.8*smoothstep(.96, 1.04, mod(ix, 2.));
-        float rr2 = (.1 + .1*ooo)+.8*smoothstep(.96, 1.04, mod(ix2, 2.));
+        // float rr2 = (.1 + .1*ooo)+.8*smoothstep(.96, 1.04, mod(ix2, 2.));
         rr1 *= .95 + (1.-.95)*(1.-v_uv.x);
         gl_FragColor = vec4(lolo*vec3(rr1, rr1, rr1), alpha);  // RGBA, purple color
     }

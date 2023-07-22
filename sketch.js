@@ -10,6 +10,7 @@ let curves = [];
 let quads = [];
 let uvs = [];
 let infos = [];
+let randoms = [];
 let angles = [];
 let surfacetypes = [];
 
@@ -46,6 +47,7 @@ function main() {
     quads = [];
     uvs = [];
     infos = [];
+    randoms = [];
     angles = [];
     surfacetypes = [];
     
@@ -221,6 +223,7 @@ function render(){
     let _buf3 = createAndSetupBuffer(gl, infos,        gl.getAttribLocation(program, "a_info"), 1);
     let _buf4 = createAndSetupBuffer(gl, angles,       gl.getAttribLocation(program, "a_angle"), 1);
     let _buf5 = createAndSetupBuffer(gl, surfacetypes, gl.getAttribLocation(program, "a_surfactype"), 1);
+    let _buf6 = createAndSetupBuffer(gl, randoms,      gl.getAttribLocation(program, "a_rando"), 3);
 
     // gl.bindBuffer(gl.ARRAY_BUFFER, transformBuffer);
     // gl.bufferData(gl.ARRAY_BUFFER, transforms, gl.STATIC_DRAW);
@@ -434,6 +437,7 @@ function constructQuads(){
     quads = new Float32Array(flatten(quads));
     uvs = new Float32Array(flatten(uvs));
     infos = new Float32Array(flatten(infos));
+    randoms = new Float32Array(flatten(randoms));
     angles = new Float32Array(flatten(angles));
     surfacetypes = new Float32Array(flatten(surfacetypes));
 }
@@ -466,12 +470,23 @@ function addquadpointstoattributes(p1, p2, p3, p4, uv1=[0,0], uv2=[0,1], uv3=[1,
         ]
     );
     let index = j;
+    let rando1 = prng.rand();
+    let rando2 = prng.rand();
+    let rando3 = prng.rand();
     infos.push(
         [
             [index],
             [index],
             [index],
             [index],
+        ]
+    );
+    randoms.push(
+        [
+            [rando1, rando2, rando3],
+            [rando1, rando2, rando3],
+            [rando1, rando2, rando3],
+            [rando1, rando2, rando3],
         ]
     );
     angles.push(
