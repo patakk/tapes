@@ -40,7 +40,6 @@ if(search.has('debug')){
 
 
 function main() {
-    
     // updateURLParameter('hash', btoa(JSON.stringify({"hash": hash, "aspect": Math.round(aaspect*10000)/10000, 'version': VERSION})).toString('base64'));
 
     curves = [];
@@ -72,7 +71,7 @@ function main() {
         gl = canvas.getContext('webgl', {preserveDrawingBuffer: true, antialias: true});
 
 
-    console.log(gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT));
+    // console.log(gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT));
     gl.canvas.width = REN;
     gl.canvas.height = Math.round(REN/ASPECT);
 
@@ -252,6 +251,7 @@ function render(){
     gl.uniform2f(gl.getUniformLocation(program, "u_randomTextureSize"), 256, 256);
     gl.uniform1f(gl.getUniformLocation(program, "u_postproc"), POSTPROC);
     let rgbalgo = Math.round(prng.rand());
+    // console.log(rgbalgo)
     gl.uniform1f(gl.getUniformLocation(program, "u_rgbalgo"), rgbalgo);
 
     gl.clearColor(0.898, 0.827, 0.675, 1);
@@ -275,8 +275,7 @@ function render(){
     gl.clearColor(0.9254902, 0.92156863, 0.90588235, 1.);
     gl.clearColor(0.9254902*1.05, 0.92156863*1.045, 0.90588235*1.05, 1.);
     gl.clear(gl.COLOR_BUFFER_BIT);
-    let u_freqvary = Math.floor(rand(0, 2));
-    // console.log(u_freqvary)
+    let u_freqvary = prng.rand() < .25 ? 1 : 0;
     gl.uniform1f(gl.getUniformLocation(program, "u_freqvary"), u_freqvary);
     let numQuads = quads.length / 8;
     for(let i = 0; i < numQuads; i++) {
@@ -575,7 +574,6 @@ function setupCurves(){
     let ctries = 0;
     let curve = [];
     let pathsteps = Math.round(rand(4, 9))*2;
-
     let aaa = DIM;
     let bbb = Math.floor(DIM/ASPECT);
     let margin = aaa*.12;
@@ -673,7 +671,7 @@ function setupCurves(){
         success = true;
         for(let i = 0; i < curve.length; i++){
             let newPos = curve[i];
-            if(newPos.x < margin || newPos.x > aaa-margin || newPos.y < margin || newPos.y > bbb-margin){
+            if (newPos.x < margin - 0.01 || newPos.x > aaa - (margin - 0.01) || newPos.y < margin - 0.01 || newPos.y > bbb - (-0.01)){
                 success = false;
                 break;
             }

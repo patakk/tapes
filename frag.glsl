@@ -265,23 +265,24 @@ void main() {
     float shiftg = u_seed.y*12. + 13. * v_rando.g;
     float shiftb = u_seed.z*12. + 13. * v_rando.b;
     
-    float freq = .25 + 2.*hash12(vec2(u_seed.r*1.234, u_seed.g*3.231+u_seed.b*3.1));
-    if(hash12(vec2(u_seed.r+3.12, u_seed.g + u_seed.b)) < -.5) {
-        freq = .25 + 2. * hash12(vec2(u_quadindex + u_seed.r * 1.234, u_quadindex + u_seed.g * 3.231 + u_quadindex + u_seed.b * 3.1));
+    float freq = .25 + 3.*hash12(vec2(u_seed.r*1.234, u_seed.g*3.231+u_seed.b*3.1));
+    if(hash12(vec2(u_seed.r+3.12, u_seed.g + u_seed.b)) < .335) {
+        freq = .25 + 3. * hash12(vec2(u_quadindex + u_seed.r * 1.234, u_quadindex + u_seed.g * 3.231 + u_quadindex + u_seed.b * 3.1));
     }
     float freqy = .25 + .3*hash12(vec2(u_seed.r*5.234, u_seed.g*2.231+u_seed.b*1.1));
-    // freq *= 1. + 5.3*pow(clamp(v_uv.x, 0., 1.), 3.);
     // freqy *= 1. + 5.3*pow(clamp(v_uv.y, 0., 1.), 3.);
-    // freq = 1.*(1.-u_freqvary) + u_freqvary*freq;
+    if(u_freqvary > .5){
+        freq *= 1. + 1.3 * pow(clamp(v_uv.x, 0., 1.), 3.);
+    }
     float xx = var*.71*freq;
     float yy = vary*.51*freq;
     float r = smoothstep(sm1, sm2, simplex3d(1.*vec3(xx, yy, shiftr)));
     float g = smoothstep(sm1, sm2, simplex3d(1.*vec3(xx, yy, shiftg)));
     float b = smoothstep(sm1, sm2, simplex3d(1.*vec3(xx, yy, shiftb)));
-    if(u_rgbalgo < .15){
-        r = 0.5 + sin(xx*14. + shiftr*1112.13)*0.5;
-        g = 0.5 + sin(xx*14. + shiftg*1112.13)*0.5;
-        b = 0.5 + sin(xx*14. + shiftb*1112.13)*0.5;
+    if(u_rgbalgo < -.15){
+        r = 0.5 + sin(xx*7. + shiftr*1112.13)*0.5;
+        g = 0.5 + sin(xx*7. + shiftg*1112.13)*0.5;
+        b = 0.5 + sin(xx*7. + shiftb*1112.13)*0.5;
     }
     
     vec2 glfrg = vec2(gl_FragCoord.x, gl_FragCoord.y);
