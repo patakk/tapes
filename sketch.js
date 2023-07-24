@@ -71,6 +71,8 @@ function main() {
     if(!gl)
         gl = canvas.getContext('webgl', {preserveDrawingBuffer: true, antialias: true});
 
+
+    console.log(gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT));
     gl.canvas.width = REN;
     gl.canvas.height = Math.round(REN/ASPECT);
 
@@ -249,6 +251,8 @@ function render(){
     gl.uniform1i(gl.getUniformLocation(program, "u_randomTexture"), 0);
     gl.uniform2f(gl.getUniformLocation(program, "u_randomTextureSize"), 256, 256);
     gl.uniform1f(gl.getUniformLocation(program, "u_postproc"), POSTPROC);
+    let rgbalgo = Math.round(prng.rand());
+    gl.uniform1f(gl.getUniformLocation(program, "u_rgbalgo"), rgbalgo);
 
     gl.clearColor(0.898, 0.827, 0.675, 1);
     gl.clearColor(rand(.9, .93), rand(.9, .92), rand(.89, .91), 1);

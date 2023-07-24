@@ -10,6 +10,7 @@ varying vec3 v_rando;
 varying float v_surfactype;
 uniform float u_postproc;
 uniform float u_quadindex;
+uniform float u_rgbalgo;
 
 uniform float u_freqvary;
 
@@ -20,10 +21,22 @@ uniform vec2 u_randomTextureSize;
 
 vec4 hcrandom(vec3 co) {
     // Map the coordinates to the range [0, 1] so we can use them to sample the texture.
-    vec2 uv = fract(co.xy+co.z*1.13141);
+    vec2 uv = fract(co.xy);
 
     // Sample the texture and return a random value in the range [0, 1].
     return texture2D(u_randomTexture, uv).rgba;
+
+    // return vec4(fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453123));
+}
+
+float random(vec2 co) {
+    // Map the coordinates to the range [0, 1] so we can use them to sample the texture.
+    vec2 uv = fract(co.xy*.9);
+
+    // Sample the texture and return a random value in the range [0, 1].
+    // return texture2D(u_randomTexture, uv).rgba;
+
+    return texture2D(u_randomTexture, uv.xy).r;
 }
 
 
@@ -37,10 +50,10 @@ float noise (vec2 _st) {
     vec2 f = fract(_st);
 
     // Four corners2D of a tile
-    float a = hash12(i);
-    float b = hash12(i + vec2(1.0, 0.0));
-    float c = hash12(i + vec2(0.0, 1.0));
-    float d = hash12(i + vec2(1.0, 1.0));
+    float a = random(i);
+    float b = random(i + vec2(1.0, 0.0));
+    float c = random(i + vec2(0.0, 1.0));
+    float d = random(i + vec2(1.0, 1.0));
 
     vec2 u = f * f * (3.0 - 2.0 * f);
 
@@ -49,15 +62,20 @@ float noise (vec2 _st) {
             (d - b) * u.x * u.y;
 }
 
-float noise3(vec2 _st,float t) {
+
+float rrandom(in vec2 st) {
+    return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123);
+}
+
+float noise3(vec2 _st, float t) {
     vec2 i = floor(_st+t);
     vec2 f = fract(_st+t);
 
     // Four corners2D of a tile
-    float a = hash12(i);
-    float b = hash12(i + vec2(1.0, 0.0));
-    float c = hash12(i + vec2(0.0, 1.0));
-    float d = hash12(i + vec2(1.0, 1.0));
+    float a = rrandom(i);
+    float b = rrandom(i + vec2(1.0, 0.0));
+    float c = rrandom(i + vec2(0.0, 1.0));
+    float d = rrandom(i + vec2(1.0, 1.0));
 
     vec2 u = f * f * (3.0 - 2.0 * f);
 
@@ -65,6 +83,7 @@ float noise3(vec2 _st,float t) {
             (c - a)* u.y * (1.0 - u.x) +
             (d - b) * u.x * u.y;
 }
+
 
 float fbm(vec2 _st) {
     float v = 0.0;
@@ -72,8 +91,8 @@ float fbm(vec2 _st) {
     vec2 shift = vec2(100.0);
     // Rotate to reduce axial bias
     mat2 rot = mat2(cos(0.5), sin(0.5),
-                    -sin(0.5), cos(0.50));
-    for (int i = 0; i < NUM_OCTAVES; ++i) {
+    -sin(0.5), cos(0.50));
+    for(int i = 0; i < NUM_OCTAVES; ++i) {
         v += a * noise(_st);
         _st = rot * _st * 2.0 + shift;
         a *= 0.5;
@@ -82,9 +101,55 @@ float fbm(vec2 _st) {
 }
 
 
+const float F3 = 0.3333333;
+const float G3 = 0.1666667;
+
 vec3 random3(vec3 c) {
-	return hcrandom(c).rgb;
+    return hcrandom(c).rgb;
 }
+
+float simplex3d(vec3 p) {
+    vec3 s = floor(p + dot(p, vec3(F3)));
+    vec3 x = p - s + dot(s, vec3(G3));
+    vec3 e = step(vec3(0.0), x - x.yzx);
+    vec3 i1 = e * (1.0 - e.zxy);
+    vec3 i2 = 1.0 - e.zxy * (1.0 - e);
+    vec3 x1 = x - i1 + G3;
+    vec3 x2 = x - i2 + 2.0 * G3;
+    vec3 x3 = x - 1.0 + 3.0 * G3;
+    vec4 w, d;
+    w.x = dot(x, x);
+    w.y = dot(x1, x1);
+    w.z = dot(x2, x2);
+    w.w = dot(x3, x3);
+    w = max(0.6 - w, 0.0);
+    d.x = dot(random3(s), x);
+    d.y = dot(random3(s + i1), x1);
+    d.z = dot(random3(s + i2), x2);
+    d.w = dot(random3(s + 1.0), x3);
+    w *= w;
+    w *= w;
+    d *= w;
+    return .5 + .5 * dot(d, vec4(52.0));
+}
+
+
+float fbm3(vec2 _st, float t) {
+    float v = 0.0;
+    float a = 0.5;
+    vec2 shift = vec2(100.0);
+    // Rotate to reduce axial bias
+    mat2 rot = mat2(cos(0.5), sin(0.5), 
+    -sin(0.5), cos(0.50));
+    for(int i = 0; i < NUM_OCTAVES; ++i) {
+        v += a * simplex3d(vec3(_st, t));
+        _st = rot * _st * 2.0 + shift;
+        a *= 0.5;
+    }
+    return v;
+}
+
+
 
 // vec3 random3(vec3 c) {
 // 	float j = 4096.0*sin(dot(c,vec3(17.0, 59.4, 15.0)));
@@ -97,54 +162,11 @@ vec3 random3(vec3 c) {
 // 	return r-0.5;
 // }
 
-
-const float F3 =  0.3333333;
-const float G3 =  0.1666667;
-
-float simplex3d(vec3 p) {
-	 vec3 s = floor(p + dot(p, vec3(F3)));
-	 vec3 x = p - s + dot(s, vec3(G3));
-	 vec3 e = step(vec3(0.0), x - x.yzx);
-	 vec3 i1 = e*(1.0 - e.zxy);
-	 vec3 i2 = 1.0 - e.zxy*(1.0 - e);
-	 vec3 x1 = x - i1 + G3;
-	 vec3 x2 = x - i2 + 2.0*G3;
-	 vec3 x3 = x - 1.0 + 3.0*G3;
-	 vec4 w, d;
-	 w.x = dot(x, x);
-	 w.y = dot(x1, x1);
-	 w.z = dot(x2, x2);
-	 w.w = dot(x3, x3);
-	 w = max(0.6 - w, 0.0);
-	 d.x = dot(random3(s), x);
-	 d.y = dot(random3(s + i1), x1);
-	 d.z = dot(random3(s + i2), x2);
-	 d.w = dot(random3(s + 1.0), x3);
-	 w *= w;
-	 w *= w;
-	 d *= w;
-	 return .5+.5*dot(d, vec4(52.0));
-}
-
 float power(float p, float g) {
     if (p < 0.5)
         return 0.5 * pow(2.*p, g);
     else
         return 1. - 0.5 * pow(2.*(1. - p), g);
-}
-float fbm3 (vec2 _st, float t) {
-    float v = 0.0;
-    float a = 0.5;
-    vec2 shift = vec2(100.0);
-    // Rotate to reduce axial bias
-    mat2 rot = mat2(cos(0.5), sin(0.5),
-                    -sin(0.5), cos(0.50));
-    for (int i = 0; i < NUM_OCTAVES; ++i) {
-        v += a * noise3(_st, t);
-        _st = rot * _st * 2.0 + shift;
-        a *= 0.5;
-    }
-    return v;
 }
 
 float rand(vec2 co){
@@ -256,7 +278,7 @@ void main() {
     float r = smoothstep(sm1, sm2, simplex3d(1.*vec3(xx, yy, shiftr)));
     float g = smoothstep(sm1, sm2, simplex3d(1.*vec3(xx, yy, shiftg)));
     float b = smoothstep(sm1, sm2, simplex3d(1.*vec3(xx, yy, shiftb)));
-    if(hash12(vec2(u_seed.r, u_seed.g+u_seed.b)) < -.5){
+    if(u_rgbalgo < .15){
         r = 0.5 + sin(xx*14. + shiftr*1112.13)*0.5;
         g = 0.5 + sin(xx*14. + shiftg*1112.13)*0.5;
         b = 0.5 + sin(xx*14. + shiftb*1112.13)*0.5;
@@ -305,7 +327,7 @@ void main() {
         float ooo = power(clamp(simplex3d(vec3(v_uv.x, v_uv.y, u_seed.x*100.+vix*20. + 551.55)), 0., 1.), 3.);
         ooo = fbm3(v_uv.xy*3., u_quadindex*0.1);
         ooo = smoothstep(.25, .75, ooo);
-        float uvx = v_uv.x + .07*fbm3(v_uv.xy * 3., u_quadindex * 0.1);
+        float uvx = v_uv.x + .07*fbm3(v_uv.xy * 1., u_quadindex * 0.1);
         // uvx = v_uv.x;
         // float var1 = 2.4 * simplex3d(vec3(v_uv.xy * 2., u_quadindex * 0.4 + 31.12));
         // float var2 = .4 * simplex3d(vec3(v_uv.xy * 2., u_quadindex * 0.4 + 133.12));
@@ -321,6 +343,7 @@ void main() {
         // float rr2 = (.1 + .1*ooo)+.8*smoothstep(.96, 1.04, mod(ix2, 2.));
         rr1 *= .95 + (1.-.95)*(1.-v_uv.x);
         gl_FragColor = vec4(lolo*vec3(rr1, rr1, rr1), alpha);  // RGBA, purple color
+        // gl_FragColor = vec4(vec3(fbm(v_uv.xy)), alpha);  // RGBA, purple color
     }
     if(v_surfactype == 2.0){
         float rnd = rand(vec2(v_uv.x, v_uv.y));
@@ -352,7 +375,12 @@ void main() {
         gl_FragColor = vec4(lolo *vec3(rr1, rr1, rr1), alpha);  // RGBA, purple color
     }
 
-    // gl_FragColor = vec4(vec3(v_uv.x, v_uv.y, 0.0), alpha);  // RGBA, purple color
+    // gl_FragColor = vec4(vec3(fbm3(v_uv.xy * 3., u_quadindex * 0.1)), 1.);
+    // gl_FragColor = vec4(vec3(simplex3d(vec3(v_uv.xy * 2., u_quadindex * 0.4 + 31.12))), 1.);
+    // gl_FragColor = vec4(vec3(fbm(vec2(v_uv.xy * 2. + u_quadindex * 0.4 + 31.12))), 1.);
+
+
+    // gl_FragColor = vec4(vec3(fbm(v_uv.xy)), alpha);  // RGBA, purple color
     // if(v_uv.x < 0.02 && v_uv.y < 0.02)
     //     gl_FragColor = vec4(vec3(1.), alpha);  // RGBA, purple color
     // else
