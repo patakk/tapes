@@ -254,6 +254,7 @@ function render(){
     // console.log(rgbalgo)
     gl.uniform1f(gl.getUniformLocation(program, "u_rgbalgo"), rgbalgo);
     gl.uniform1f(gl.getUniformLocation(program, "u_alterfrq"), prng.rand());
+    gl.uniform1f(gl.getUniformLocation(program, "u_frq"), prng.rand());
 
     gl.clearColor(0.898, 0.827, 0.675, 1);
     gl.clearColor(rand(.9, .93), rand(.9, .92), rand(.89, .91), 1);
@@ -282,6 +283,7 @@ function render(){
     for(let i = 0; i < numQuads; i++) {
         const offset = i * 4; // 4 vertices per quad
         gl.uniform1f(gl.getUniformLocation(program, "u_quadindex"), i);
+        gl.uniform3f(gl.getUniformLocation(program, "u_quadrandom"), prng.rand(), prng.rand(), prng.rand());
         gl.drawArrays(gl.TRIANGLE_STRIP, offset, 4);
     }
 

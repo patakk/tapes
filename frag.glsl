@@ -9,6 +9,7 @@ varying float v_angle;
 varying vec3 v_rando;
 varying float v_surfactype;
 uniform float u_postproc;
+uniform float u_frq;
 uniform float u_quadindex;
 uniform float u_rgbalgo;
 uniform float u_alterfrq;
@@ -17,6 +18,8 @@ uniform float u_freqvary;
 
 uniform sampler2D u_randomTexture;
 uniform vec2 u_randomTextureSize;
+
+uniform vec3 u_quadrandom;
 
 #define NUM_OCTAVES 8
 
@@ -266,9 +269,11 @@ void main() {
     float shiftg = u_seed.y*12. + 13. * v_rando.g;
     float shiftb = u_seed.z*12. + 13. * v_rando.b;
     
-    float freq = .25 + 3.*hash12(vec2(u_seed.r*1.234, u_seed.g*3.231+u_seed.b*3.1));
+    // float freq = .25 + 3. * hash12(vec2(u_seed.r * 1.234, u_seed.g * 3.231 + u_seed.b * 3.1));
+    float freq = .25 + 3.*u_frq;
     if(u_alterfrq < .335) {
-        freq = .25 + 3. * hash12(vec2(u_quadindex + u_seed.r * 1.234, u_quadindex + u_seed.g * 3.231 + u_quadindex + u_seed.b * 3.1));
+        freq = .25 + 3. * u_quadrandom.x;
+
     }
     float freqy = .25 + .3*hash12(vec2(u_seed.r*5.234, u_seed.g*2.231+u_seed.b*1.1));
     // freqy *= 1. + 5.3*pow(clamp(v_uv.y, 0., 1.), 3.);
