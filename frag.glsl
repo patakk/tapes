@@ -319,6 +319,8 @@ void main() {
     lolo = .75 + .25 * power(lolo, 3.);
     lolo = 1.;
 
+    res = mix(res, vec3(1., fract(u_seed.x*4.131), 0.), .15*u_seed.y);
+
     gl_FragColor = vec4(res, alpha);  // RGBA, purple color
     // if(u_seed.z < 0.001 && abs(u_version-1.0) < 0.001){
     //     float hhhs = hash12(vec2(v_uv.x*.01, v_uv.y*.01));
