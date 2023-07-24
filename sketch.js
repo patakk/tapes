@@ -253,6 +253,7 @@ function render(){
     let rgbalgo = Math.round(prng.rand());
     // console.log(rgbalgo)
     gl.uniform1f(gl.getUniformLocation(program, "u_rgbalgo"), rgbalgo);
+    gl.uniform1f(gl.getUniformLocation(program, "u_alterfrq"), prng.rand());
 
     gl.clearColor(0.898, 0.827, 0.675, 1);
     gl.clearColor(rand(.9, .93), rand(.9, .92), rand(.89, .91), 1);

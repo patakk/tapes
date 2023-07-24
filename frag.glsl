@@ -11,6 +11,7 @@ varying float v_surfactype;
 uniform float u_postproc;
 uniform float u_quadindex;
 uniform float u_rgbalgo;
+uniform float u_alterfrq;
 
 uniform float u_freqvary;
 
@@ -266,7 +267,7 @@ void main() {
     float shiftb = u_seed.z*12. + 13. * v_rando.b;
     
     float freq = .25 + 3.*hash12(vec2(u_seed.r*1.234, u_seed.g*3.231+u_seed.b*3.1));
-    if(hash12(vec2(u_seed.r+3.12, u_seed.g + u_seed.b)) < .335) {
+    if(u_alterfrq < .335) {
         freq = .25 + 3. * hash12(vec2(u_quadindex + u_seed.r * 1.234, u_quadindex + u_seed.g * 3.231 + u_quadindex + u_seed.b * 3.1));
     }
     float freqy = .25 + .3*hash12(vec2(u_seed.r*5.234, u_seed.g*2.231+u_seed.b*1.1));
