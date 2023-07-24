@@ -22,7 +22,7 @@ uniform vec2 u_randomTextureSize;
 uniform vec3 u_quadrandom;
 uniform vec3 u_quadrandom2;
 
-#define NUM_OCTAVES 8
+#define NUM_OCTAVES 6
 
 vec4 hcrandom(vec3 co) {
     // Map the coordinates to the range [0, 1] so we can use them to sample the texture.
@@ -147,6 +147,7 @@ float fbm3(vec2 _st, float t) {
     mat2 rot = mat2(cos(0.5), sin(0.5), 
     -sin(0.5), cos(0.50));
     for(int i = 0; i < NUM_OCTAVES; ++i) {
+        // v += a * simplex3d(vec3(_st, t));
         v += a * simplex3d(vec3(_st, t));
         _st = rot * _st * 2.0 + shift;
         a *= 0.5;
