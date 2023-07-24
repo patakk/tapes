@@ -284,6 +284,7 @@ function render(){
         const offset = i * 4; // 4 vertices per quad
         gl.uniform1f(gl.getUniformLocation(program, "u_quadindex"), i);
         gl.uniform3f(gl.getUniformLocation(program, "u_quadrandom"), prng.rand(), prng.rand(), prng.rand());
+        gl.uniform3f(gl.getUniformLocation(program, "u_quadrandom2"), prng.rand(), prng.rand(), prng.rand());
         gl.drawArrays(gl.TRIANGLE_STRIP, offset, 4);
     }
 

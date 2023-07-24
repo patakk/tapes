@@ -20,6 +20,7 @@ uniform sampler2D u_randomTexture;
 uniform vec2 u_randomTextureSize;
 
 uniform vec3 u_quadrandom;
+uniform vec3 u_quadrandom2;
 
 #define NUM_OCTAVES 8
 
@@ -265,17 +266,16 @@ void main() {
     float sm1 = .1;
     float sm2 = .9;
     float pw = 1.;
-    float shiftr = u_seed.x*12. + 13. * v_rando.r;
-    float shiftg = u_seed.y*12. + 13. * v_rando.g;
-    float shiftb = u_seed.z*12. + 13. * v_rando.b;
+    float shiftr = u_seed.x*12. + 13. * u_quadrandom.r;
+    float shiftg = u_seed.y*12. + 13. * u_quadrandom.g;
+    float shiftb = u_seed.z*12. + 13. * u_quadrandom.b;
     
     // float freq = .25 + 3. * hash12(vec2(u_seed.r * 1.234, u_seed.g * 3.231 + u_seed.b * 3.1));
     float freq = .25 + 3.*u_frq;
     if(u_alterfrq < .335) {
-        freq = .25 + 3. * u_quadrandom.x;
-
+        freq = .25 + 3. * u_quadrandom2.x;
     }
-    float freqy = .25 + .3*hash12(vec2(u_seed.r*5.234, u_seed.g*2.231+u_seed.b*1.1));
+    // float freqy = .25 + .3*hash12(vec2(u_seed.r*5.234, u_seed.g*2.231+u_seed.b*1.1));
     // freqy *= 1. + 5.3*pow(clamp(v_uv.y, 0., 1.), 3.);
     if(u_freqvary > .5){
         freq *= 1. + 1.3 * pow(clamp(v_uv.x, 0., 1.), 3.);
